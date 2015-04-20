@@ -1058,34 +1058,6 @@ public class MSReader extends javax.swing.JFrame {
         Peptide current = cpn.getPeptide();
         hdExchangeInstance.setPeptide( current );
         hdExchangeInstance.analyze();
-//        exchange = new ExchangePts ();
-//        exchange.setPeptide(current);
-        for (MassSpectrum ms : loadedMS) {
-            int peakIndex = Utils.binarySearch(ms.msValues[0], current.mz);
-            if (peakIndex > ms.msValues[0].length) {
-                Utils.showErrorMessage("M/z peak not found. Try again...");
-                return;
-            }
-            stepSize = ms.msValues[0][50] - ms.msValues[0][49];
-            int windowSize = getIntProperty("windowSize");
-            int startIndex = peakIndex - (int) (windowSize/stepSize);
-            int endIndex = peakIndex + (int) (windowSize/stepSize);
-            
-            XYSeries series = FormatChange.ArrayToXYSeries(ms.msValues, startIndex, endIndex);
-            
-            XYSeriesCollection dataset = new XYSeriesCollection();
-            dataset.addSeries(series);       
-            DecimalFormat dataformat = FormatChange.getFormat(stepSize);
-            double[][] data = new double [2][];
-            data[0] = Arrays.copyOfRange(ms.msValues[0], startIndex, endIndex);
-            data[1] = Arrays.copyOfRange(ms.msValues[1], startIndex, endIndex);
-            FormatChange.FormatArray(data[0], dataformat);
-            Exchange_Popup ep = new Exchange_Popup( data, current, ms.getFullTitle() ); 
-            ep.setVisible(true);
-            exchange.addTimePoint (ep.timePoint, ep.cent, ep.title);
-        }
-        
-        new HDX_Form(this, current).setVisible(true);
     }//GEN-LAST:event_viewHDExchangeMenuActionPerformed
     
     private JFreeChart createLineChart(String title, String xlabel, String ylabel, XYSeriesCollection dataset) {

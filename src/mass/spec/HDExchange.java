@@ -140,6 +140,11 @@ public class HDExchange {
         for ( HDExchangeTimePoint timePoint : exchangePoints ) {
             timePoint.showWindow();
         }
-        
+     
+        hdxSummary = new HDX_Form ();
+    }
+    
+    public void updateSummary () {
+        hdxSummary.updateAll();
     }
 }

@@ -512,7 +512,8 @@ public class HDX_Form extends javax.swing.JFrame {
     }//GEN-LAST:event_SaveActionPerformed
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
-        refresh();
+//        refresh();
+        updateAll();
     }//GEN-LAST:event_updateActionPerformed
 
     private void removeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeActionPerformed
