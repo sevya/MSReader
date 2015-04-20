@@ -1,0 +1,38 @@
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body>
+        <div>
+            <h3> Generate Heat Map </h3>
+            Generating a heat map is a feature that allows you to take your hydrogen 
+            exchange data and view it in the context of a molecular structure. MS Reader
+            works with the molecular visualization software PyMol (DeLano Scientific, Inc.)
+            to overlay exchange rates onto structures. You must have PyMol installed on your
+            computer to use this feature. PyMol is freely available via its website, www.pymol.org.
+            
+            <br><br>To generate a heat map, you have to enter in several parameters. 
+            You can either create an exchange- or protection-based map, to either 
+            show the exchange of various peptides, or the difference in exchange 
+            of peptides between two states (i.e. free and bound). You can also choose 
+            your preferred data source: either MSReader-generated HDX files, or 
+            Excel files. If you choose HDX files, you have to make sure to generate 
+            a regression line before saving the file, or else it will not be valid. 
+            If you choose Excel files, you must enter data in the correct format: 
+            Column A must contain the peptide sequences, and Column B must contain 
+            the exchange value in D/res. The numeric values must be entered as numbers, 
+            not formulas, or else a heat map cannot be generated.<br><br>Next, 
+            choose a PDB file and enter your protein sequence. PDBs can be loaded 
+            either from the user's computer, or downloaded from the RCSB database. 
+            <br><br> MSReader uses a default color gradient scale, but you can freely edit 
+            and save your own on the "Color gradient" tab. Blue gradient is used for 
+            analyzing exchange, and the red gradient is used for protection maps.            
+        </div>
+    </body>
+</html>
