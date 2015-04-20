@@ -20,8 +20,55 @@ public class HDX_Form extends javax.swing.JFrame {
    MSReader parent;
    DecimalFormat akformat = new DecimalFormat("###.###");
      
-   public HDX_Form() {}
+   public HDX_Form () {
+       super( "HD Exchange Analysis" );
+       initComponents();
+       zstate.setText( Integer.toString( 
+               MSReader.getHDExchangeInstance()
+                       .getPeptide().charge ) );
+       residues.setText( Integer.toString( 
+               MSReader.getHDExchangeInstance()
+                       .getPeptide().sequence.length() ) );
+       updateAll();
+   }
    
+    private void updateTable () {
+        DefaultTableModel dtm = MSReader.getHDExchangeInstance().getSummaryDataAsTable();
+        jTable1.setModel(dtm);
+        jTable1.revalidate();
+    }
+    
+    private void updatePlot () {
+
+        XYSeries ser = MSReader.getHDExchangeInstance().getSummaryDataAsXYSeries();
+        XYSeriesCollection coll = new XYSeriesCollection();
+        coll.addSeries(ser);
+        
+        final NumberAxis xAxis = new NumberAxis( "time(min)" );
+        final ValueAxis yAxis = new NumberAxis( "D/residue" );
+        final XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        renderer.setSeriesLinesVisible(0, false);
+        XYPlot plot = new XYPlot (coll, xAxis, yAxis, (XYItemRenderer)renderer);
+        plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
+        JFreeChart chart = new JFreeChart(
+                MSReader.getHDExchangeInstance().getPeptide().displaySequence,
+                JFreeChart.DEFAULT_TITLE_FONT, 
+                plot, 
+                false
+        );
+        
+        ChartPanel chartPanel = new ChartPanel (chart);
+        chartPanel.setPreferredSize(new java.awt.Dimension(500, 250));
+        jPanel1.removeAll();
+        jPanel1.add(chartPanel, BorderLayout.CENTER);
+        jPanel1.setVisible(true);
+        jPanel1.revalidate();
+   }
+   
+   public void updateAll () {
+       updateTable();
+       updatePlot();
+   }
    public HDX_Form (MSReader msr) {
         super("HDX Form");
         parent = msr;

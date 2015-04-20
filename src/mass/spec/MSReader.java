@@ -135,35 +135,17 @@ public class MSReader extends javax.swing.JFrame {
     
     private void checkOS() {
         try {
-//            String os = System.getProperty("os.name").toLowerCase();
-//            if (os.contains("win")) {
-//                bin = new File(new File(".").getCanonicalPath());
-//                msreaderFiles = bin.getParentFile();
-//                temp = Utils.osjoin(msreaderFiles, "temp");
-//                if (!temp.exists()) temp.mkdir();
-//
-//                documents = new File (Utils.osjoin(System.getProperty("user.home"), "Documents"));
-//            } else {
-                documents = new File (Utils.osjoin(System.getProperty("user.home"), "Documents"));
+            documents = new File (Utils.osjoin(System.getProperty("user.home"), "Documents"));
 
-                msreaderFiles = Utils.osjoin(documents, "MSReader files");
-                bin = Utils.osjoin(msreaderFiles, "bin");
-                temp = Utils.osjoin(msreaderFiles, "temp");
-                if (!msreaderFiles.exists()) msreaderFiles.mkdir();
-                if (!temp.exists()) temp.mkdir();
-                if (!bin.exists()) bin.mkdir();
+            msreaderFiles = Utils.osjoin(documents, "MSReader files");
+            bin = Utils.osjoin(msreaderFiles, "bin");
+            temp = Utils.osjoin(msreaderFiles, "temp");
+            if (!msreaderFiles.exists()) msreaderFiles.mkdir();
+            if (!temp.exists()) temp.mkdir();
+            if (!bin.exists()) bin.mkdir();
 
-//            } 
-//            if (str.toLowerCase().contains("netbeans")) {
-//                bin = new File ("C:/Users/Alex/Documents/MSReader files/bin");
-//                documents = new File ("C:/Users/Alex/Documents");
-//                msreaderFiles = new File ("C:/Users/Alex/Documents/MSReader files");
-//                temp = new File ("C:/Users/Alex/Documents/MSReader files/temp");
-//            } else {
-                
-//            }
-        } catch (Exception e) {
-            //do nothing
+        } catch ( Exception exc ) {
+            Utils.showErrorMessage( "Unable to configure settings");
         }
     }
     
@@ -1075,6 +1057,7 @@ public class MSReader extends javax.swing.JFrame {
         cpn.setVisible(true);
         Peptide current = cpn.getPeptide();
         hdExchangeInstance.setPeptide( current );
+        hdExchangeInstance.analyze();
 //        exchange = new ExchangePts ();
 //        exchange.setPeptide(current);
         for (MassSpectrum ms : loadedMS) {

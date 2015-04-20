@@ -19,6 +19,7 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.table.DefaultTableModel;
+import org.apache.commons.lang.ArrayUtils;
 
 
 public class Utils {
@@ -288,14 +289,16 @@ public class Utils {
     
     public static void main (String[] args)
     {
-        JFrame frame = new JFrame();
-        JPanel panel = new JPanel(new BorderLayout());
-        JFileChooser chooser = new JFileChooser();
-        panel.add(chooser);
-        frame.add(panel);
-        frame.pack();
-        frame.setVisible(true);
-        System.out.println(chooser.showOpenDialog(frame));
+        double[] test = {1, 2, 5};
+        double[] testCopy;
+        testCopy = test;
+        testCopy = ArrayUtils.remove( testCopy, 1 );
+        for ( int i = 0; i < test.length; ++i ) {
+            System.out.println( test[ i ] );
+        }
+        for ( int i = 0; i < testCopy.length; ++i ) {
+            System.out.println( testCopy[ i ] );
+        }
         
     }
 }

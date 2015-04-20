@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import javax.swing.table.DefaultTableModel;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
@@ -18,8 +19,8 @@ public class HDExchange {
     
     public ArrayList<MassSpectrum> exchangeSpectra;
     public ArrayList<HDExchangeTimePoint> exchangePoints;
-    Peptide peptide;
-    
+    private Peptide peptide;
+    private HDX_Form hdxSummary;
     
     public HDExchange () {
         exchangeSpectra = new ArrayList();
@@ -54,13 +55,41 @@ public class HDExchange {
        return exchangeSpectra.size();
     }
     
+    public Peptide getPeptide () { return peptide; }
+    
     public void setPeptide ( Peptide pep ) { peptide = pep; }
     
     public boolean hasZeroTimePoint () {
         for ( HDExchangeTimePoint sample : exchangePoints ) { 
-            if ( sample.timePoint == 0 )  return true;
+            if ( sample.getTimePoint() == 0 )  return true;
         }
         return false;
+    }
+    
+    public double[][] getSummaryData () {
+        double[][] summaryData = new double[ 2 ][ exchangePoints.size() ];
+        for ( int i = 0; i < exchangePoints.size(); ++i ) {
+            summaryData[ 0 ][ i ] = exchangePoints.get( i ).getTimePoint();
+            if ( hasZeroTimePoint() ) {
+                summaryData[ 1 ][ i ] = 
+                        exchangePoints.get( i ).getCentroid() - 
+                        exchangePoints.get( 0 ).getCentroid();
+            } else {
+                summaryData[ 1 ][ i ] = exchangePoints.get( i ).getCentroid();
+            }
+        }
+        return summaryData;
+    }
+    
+    public DefaultTableModel getSummaryDataAsTable () {
+        return new DefaultTableModel( 
+                FormatChange.ArrayToTable( getSummaryData() ), 
+                new String[] {"time(min)", "centroid"} 
+        );
+    }
+    
+    public XYSeries getSummaryDataAsXYSeries () {
+        return FormatChange.ArrayToXYSeries( getSummaryData() );
     }
     
     // Analyzes the loaded spectra to populate HDExchangeTimePoint objects
@@ -99,38 +128,18 @@ public class HDExchange {
 //            DecimalFormat dataformat = FormatChange.getFormat(stepSize);
 //            FormatChange.FormatArray(data[0], dataformat);
             
-            Exchange_Popup ep = new Exchange_Popup( dataRange, peptide, scan.getFullTitle() ); 
-            ep.setVisible(true);
-            HDExchangeTimePoint timePoint = new HDExchangeTimePoint( ep, dataRange, 
+//            Exchange_Popup ep = new Exchange_Popup( dataRange, scan.getFullTitle() ); 
+//            ep.setVisible(true);
+            HDExchangeTimePoint timePoint = new HDExchangeTimePoint( dataRange, 
                 Utils.getDeutTimePoint( scan.getRunTitle() ) 
             );
             exchangePoints.add( timePoint );
+            
         }
-    }
-}
-
-class HDExchangeTimePoint {
-    // Class for holding data related to an HD exchange time point
-    // Holds the time point of measurement, centroid mass, difference in 
-    // centroid mass from zero time point, and deuteration per residue
-    Exchange_Popup ep;
-    double[][] dataRange;
-    double centroid;
-    double deltaCentroid;
-    double timePoint;
-    String key;
-    double dperr;
-    
-    public HDExchangeTimePoint ( Exchange_Popup window, double[][] range, double time_point ) {
-        ep = window;
-        dataRange = range;
-        timePoint = time_point;
-    }
-    
-    private void calculateValues () {
-        centroid = MSMath.calcCentroid( dataRange );
         
-        deltaCentroid =
+        for ( HDExchangeTimePoint timePoint : exchangePoints ) {
+            timePoint.showWindow();
+        }
+        
     }
-   
 }
