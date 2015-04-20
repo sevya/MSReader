@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -82,13 +83,31 @@ public class Utils {
         logException (loc, e, null);
     }
     
-    // binary search of an array that returns the value closest to the target
+    // binary search of an array that returns the insertion point of the target
     public static int binarySearch (double[] array, double key) {
         int index = Arrays.binarySearch (array, key);
         if (index < 0) index = -(index + 1);
         return index;
     }
     
+    // Generic method for binary search of a list
+    public static int binarySearch ( List<Double> array, Double key ) {
+        int index = Collections.binarySearch (array, key);
+        if (index < 0) index = -(index + 1);
+        return index;
+    }
+    
+    public static int closestTo ( List< Double > array, Double key ) {
+        Double minDistance = Math.pow( key - array.get( 0 ), 2 );
+        int minIndex = 0;
+        for ( int i = 1; i < array.size(); ++i ) {
+            if ( Math.pow( key - array.get( i ), 2 ) < minDistance ) {
+                minDistance = Math.pow( key - array.get( i ), 2 );
+                minIndex = i;
+            }
+        }
+        return minIndex;
+    }
         
     public static String trimPeptide (String str) {
         str = str.trim();
@@ -289,16 +308,10 @@ public class Utils {
     
     public static void main (String[] args)
     {
-        double[] test = {1, 2, 5};
-        double[] testCopy;
-        testCopy = test;
-        testCopy = ArrayUtils.remove( testCopy, 1 );
-        for ( int i = 0; i < test.length; ++i ) {
-            System.out.println( test[ i ] );
-        }
-        for ( int i = 0; i < testCopy.length; ++i ) {
-            System.out.println( testCopy[ i ] );
-        }
+        Double x = 5.0;
+        Double y = 8.0;
+        System.out.println( x.compareTo( y ) );
+        
         
     }
 }

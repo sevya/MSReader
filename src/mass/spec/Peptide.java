@@ -89,7 +89,7 @@ public class Peptide implements Serializable {
     }
     
     public double[][] getNonThreadedDistribution (int reps) {
-        Thread thread = new Thread (new DistributionCalc(this, reps, 1, mass_vector, prob_vector, new Object()));
+        Thread thread = new Thread (new DistributionCalc(this, reps, 1, mass_vector, prob_vector, new Object(), false));
         thread.start();
         try {
             thread.join();
@@ -106,7 +106,29 @@ public class Peptide implements Serializable {
         int num_threads = OPTIMUM_THREAD_NO;
         Thread[] threads = new Thread[num_threads];
         final Object o = new Object();
-        DistributionCalc calc = new DistributionCalc(this, reps, num_threads, mass_vector, prob_vector, o);
+        DistributionCalc calc = new DistributionCalc(this, reps, num_threads, mass_vector, prob_vector, o, false);
+        for (int i = 0; i < threads.length; i++) {
+//            threads[i] = new Thread(new DistributionCalc(this, reps, num_threads, mass_vector, prob_vector, o));
+            threads[i] = new Thread(calc);
+            threads[i].start();
+        } for (int i = 0; i < threads.length; i++) {
+            try {
+                threads[i].join();
+            } catch (InterruptedException e) {
+                //do nothing
+            }
+        }
+       double[][] data = new double[2][];
+       data[0] = FormatChange.ArraylistToArray(mass_vector);
+       data[1] = FormatChange.ArraylistToArray(prob_vector);
+       return data;
+    }
+    
+    public double[][] getDiscreteDistribution (int reps) {
+        int num_threads = OPTIMUM_THREAD_NO;
+        Thread[] threads = new Thread[num_threads];
+        final Object o = new Object();
+        DistributionCalc calc = new DistributionCalc(this, reps, num_threads, mass_vector, prob_vector, o, true);
         for (int i = 0; i < threads.length; i++) {
 //            threads[i] = new Thread(new DistributionCalc(this, reps, num_threads, mass_vector, prob_vector, o));
             threads[i] = new Thread(calc);
@@ -149,6 +171,7 @@ public class Peptide implements Serializable {
             FormatChange.ArraylistToArray(prob_vector)};
     }
     
+    
     public static void main (String[] args) {
        Peptide pept = new Peptide("FATWSPSKARLHLQGRSNAWRPQVNNPKEWLQCV", 2, 8.32);
        for (int i = 0; i < 1000; i++) {
@@ -169,8 +192,11 @@ class DistributionCalc implements Runnable {
     List<Double> prob_vector;
     Random rand;
     final Object lockObject;
+    boolean discrete = false;
     
-    public DistributionCalc (Peptide p, int r, int threadno, List<Double> mv, List<Double> pv, Object o) {
+    public DistributionCalc (Peptide p, int r, int threadno, List<Double> mv, 
+            List<Double> pv, Object o, 
+            boolean disc ) {
         peptide = p;
         reps = r;
         rand = new Random();
@@ -178,11 +204,13 @@ class DistributionCalc implements Runnable {
         prob_vector = pv;
         num_threads = threadno;
         lockObject = o;
+        discrete = disc;
     }
     
     @Override
     public void run() {
-        calculateDistribution(reps/num_threads);
+        if ( discrete ) calculateDiscreteDistribution( reps/num_threads );
+        else calculateDistribution( reps/num_threads );
     }
     
     private void calculateDistribution (int r) {
@@ -231,6 +259,30 @@ class DistributionCalc implements Runnable {
         }
     }
     
+    private void calculateDiscreteDistribution ( int r ) {
+        MersenneTwisterRNG rng = new MersenneTwisterRNG();
+        CarbonGenerator c = new CarbonGenerator(rng, peptide.element_composition[0]);
+        HydrogenGenerator h = new HydrogenGenerator(rng, peptide.element_composition[1]);
+        NitrogenGenerator n = new NitrogenGenerator(rng, peptide.element_composition[2]);
+        OxygenGenerator o = new OxygenGenerator(rng, peptide.element_composition[3]);
+        SulfurGenerator s = new SulfurGenerator(rng, peptide.element_composition[4]);
+        double sum;
+        double frequency = 1/(double)reps;
+        double step = 1/(double)peptide.charge;
+        
+        // Calculate for the first six and return the first five
+        for ( int ii = 0; ii <= 5; ++ii ) {
+            mass_vector.add( peptide.mz + ( step*ii ) );
+            prob_vector.add( 0.0 );
+        }
+        for (int j = 0; j < r; j++) {
+            sum = (c.getSum()+h.getSum()+n.getSum()+o.getSum()+s.getSum()+(peptide.charge*Isotope.H1.mass()))/(double)peptide.charge;
+            synchronized (lockObject) {
+                int index = Utils.closestTo( mass_vector, sum );
+                prob_vector.set( index, prob_vector.get( index ) + frequency );
+            }
+        }
+    }
     private double carbon () {
         if (rand.nextInt(10000) < 107) return 13.0033548378; 
         else return 12.0;
