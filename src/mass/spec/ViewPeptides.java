@@ -7,28 +7,27 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
 public class ViewPeptides extends javax.swing.JDialog {
-
-    boolean saved;
-//    int sortKey;
-    private final JFileChooser fc;
-    private final MSReader msr;
+    String peptide;
+    double mz;
+    double elution;
+    double z;
+    MSReader msr;
+    boolean saved = true;
+    int sorter = 1;
+    JFileChooser fc = new JFileChooser();
     
     public ViewPeptides(java.awt.Frame parent, boolean modal) {
         super(parent, "Peptides", modal);
         initComponents();
-        msr = MSReader.getInstance();
-        fc = new JFileChooser();
-        saved = true;
-//        sortKey = 1;
-        DefaultTableModel table = FormatChange.PeptidesToDTM( msr.getPeptides() );
-        jTable1.setModel( table );
+        msr = (MSReader)parent;
+        DefaultTableModel d = FormatChange.PeptidesToDTM(msr.peptides);
+        jTable1.setModel(d);
         jTable1.revalidate();
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         jTable1.getTableHeader().addMouseListener( new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                int sortKey = jTable1.getTableHeader().columnAtPoint( e.getPoint() );
-                msr.getPeptides().setSortKey( sortKey );
+                sorter = jTable1.getTableHeader().columnAtPoint(e.getPoint());
                 refresh();
             }
 
@@ -53,7 +52,7 @@ public class ViewPeptides extends javax.swing.JDialog {
         addWindowListener( new WindowListener() {
             @Override
             public void windowClosing(WindowEvent e) {
-                if ( saved ) dispose();
+                if (saved) dispose();
                 else {
                      int opt = JOptionPane.showOptionDialog(null, "Do you want to save your peptides before exiting?",
                         "Save", JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, 
@@ -265,10 +264,10 @@ public class ViewPeptides extends javax.swing.JDialog {
 
     private void addActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addActionPerformed
         try {
-            EditPeptide ep = new EditPeptide( msr, true );
+            EditPeptide ep = new EditPeptide(msr, true);
             ep.setLocationRelativeTo(this);
             ep.setVisible(true);
-            msr.addPeptidetoList( ep.getPeptide() );
+            msr.peptides.addPeptide(ep.getPeptide());
             saved = false;
             refresh();
         } catch (Exception e) { 
@@ -282,16 +281,15 @@ public class ViewPeptides extends javax.swing.JDialog {
             return;
         }
         int[] selectedIndices = jTable1.getSelectedRows();
-        String prompt = "Are you sure you want to delete " + 
-                ((selectedIndices.length > 1) ? 
-                "this peptide?" : "these peptides?");
-
+        String prompt = "Are you sure you want to delete ";
+        String end = (selectedIndices.length > 1) ? "this peptide?" : "these peptides?";
+        prompt += end;
         int opt = JOptionPane.showOptionDialog(null, prompt, "Peptide delete", 
                         JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, 
                         null, new Object[] {"Yes", "No"}, (Object)"Yes");
         if (opt == 1) return;
-        for ( int index : selectedIndices ) {
-            msr.removePeptideFromList( index );
+        for (int i : selectedIndices) {
+            msr.peptides.removePeptide(i);
         }
         saved = false;
         refresh(); 
@@ -303,12 +301,12 @@ public class ViewPeptides extends javax.swing.JDialog {
             return;
         }
         int index = jTable1.getSelectedRow();
-        EditPeptide ep = new EditPeptide( msr, true );
+        EditPeptide ep = new EditPeptide(msr, true);
         ep.setLocationRelativeTo(this);
-        ep.setPeptide( msr.getPeptides().elementAt(index) );
-        ep.setVisible( true );
-        msr.removePeptideFromList( index );
-        msr.addPeptidetoList( ep.getPeptide() );
+        ep.setPeptide (msr.peptides.elementAt(index));
+        ep.setVisible(true);
+        msr.peptides.removePeptide(index);
+        msr.peptides.addPeptide(ep.getPeptide());
         saved = false;
         refresh();
     }//GEN-LAST:event_editActionPerformed
@@ -318,17 +316,17 @@ public class ViewPeptides extends javax.swing.JDialog {
                         "Peptide delete", JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, 
                         null, new Object[] {"Yes", "No"}, (Object)"Yes");
         if (opt != 1) {
-            msr.setPeptides( new PeptideList() );
+            msr.peptides = new PeptideList();
             saved = false;
             refresh();
         }
     }//GEN-LAST:event_clearActionPerformed
 
     private void save () {
-        if (msr.getPeptides().getPath() == null) {
-            fc.setCurrentDirectory( msr.msreaderFiles );
-            fc.setFileFilter( fc.getAcceptAllFileFilter() );
-            fc.setSelectedFile( new File("") );
+        if (msr.peptides.path == null) {
+            fc.setCurrentDirectory(msr.msreaderFiles);
+            fc.setFileFilter(fc.getAcceptAllFileFilter());
+            fc.setSelectedFile(new File(""));
             int returnVal = fc.showSaveDialog(this);
             if (returnVal != JFileChooser.APPROVE_OPTION) return;
             File savepath;
@@ -338,15 +336,15 @@ public class ViewPeptides extends javax.swing.JDialog {
             else {
                 savepath = new File(fc.getSelectedFile().toString() + ".pep");
             }
-            msr.getPeptides().setPath(savepath);
+            msr.peptides.setPath(savepath);
             refresh();
-            msr.getPeptides().save();
+            msr.peptides.save();
         }
-        else msr.getPeptides().save();
+        else msr.peptides.save();
         saved = true;
         Utils.showMessage("Peptide list saved!");
-        if (!new File (msr.getProperty("peptidepath")).exists()) {
-            msr.setProperty("peptidepath", msr.getPeptides().getPath().toString());
+        if (!new File (msr.properties.getProperty("peptidepath")).exists()) {
+            msr.properties.setProperty("peptidepath", msr.peptides.path.toString());
             msr.saveProperties();
         }
     }
@@ -356,61 +354,54 @@ public class ViewPeptides extends javax.swing.JDialog {
     }//GEN-LAST:event_saveActionPerformed
 
     private void newPeptideListActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_newPeptideListActionPerformed
-        msr.setPeptides( new PeptideList() );
+        msr.peptides = new PeptideList();
         refresh();
         saved = false;
     }//GEN-LAST:event_newPeptideListActionPerformed
 
     private void openListActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_openListActionPerformed
-        fc.setCurrentDirectory( msr.msreaderFiles );
+        fc.setCurrentDirectory(msr.msreaderFiles);
         fc.setFileFilter(ExtensionFilter.pepfilter);
         fc.setSelectedFile(new File(""));
         int returnVal = fc.showOpenDialog(this);
-        if (returnVal != JFileChooser.APPROVE_OPTION) return;
-        
-        File openpath = fc.getSelectedFile();
-        try {
-            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(openpath));
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            File openpath = fc.getSelectedFile();
             try {
-                msr.setPeptides( (PeptideList)ois.readObject() );
-            } finally {
+                ObjectInputStream ois = new ObjectInputStream(new FileInputStream(openpath));
+                msr.peptides = (PeptideList)ois.readObject();
                 ois.close();
+            } catch (Exception e) {
+                Utils.showErrorMessage("error loading list");
             }
-        } catch ( IOException e ) {
-            Utils.showErrorMessage("Error loading list");
-        } catch ( ClassNotFoundException e ) {
-            Utils.showErrorMessage("Error loading list");
+            setTitle(msr.peptides.path.getName());
+            refresh();
         }
-        setTitle( msr.getPeptides().getPath().getName() );
-        refresh();
-        
         saved = true;
     }//GEN-LAST:event_openListActionPerformed
 
     private void saveASActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveASActionPerformed
-        fc.setCurrentDirectory( msr.msreaderFiles );
+        fc.setCurrentDirectory(msr.msreaderFiles);
         fc.setFileFilter(fc.getAcceptAllFileFilter());
         fc.setSelectedFile(new File(""));
         int returnVal = fc.showSaveDialog(this);
-        if (returnVal != JFileChooser.APPROVE_OPTION) return;
-        
-        File savepath;
-        if (fc.getSelectedFile().toString().toLowerCase().contains(".pep")) {
-            savepath = fc.getSelectedFile();
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            File savepath;
+            if (fc.getSelectedFile().toString().toLowerCase().contains(".pep")) {
+                savepath = fc.getSelectedFile();
+            }
+            else {
+                savepath = new File(fc.getSelectedFile().toString() + ".pep");
+            }
+            msr.peptides.setPath(savepath);
+            refresh();
+            msr.peptides.save();
+            Utils.showMessage("Peptide list saved!");
+            saved = true;
         }
-        else {
-            savepath = new File(fc.getSelectedFile().toString() + ".pep");
-        }
-        msr.getPeptides().setPath( savepath );
-        refresh();
-        msr.getPeptides().save();
-        Utils.showMessage("Peptide list saved!");
-        saved = true;
-        
     }//GEN-LAST:event_saveASActionPerformed
 
     private void setDefaultActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_setDefaultActionPerformed
-        msr.setProperty( "peptidepath", msr.getPeptides().path.toString() );
+        msr.properties.setProperty ("peptidepath", msr.peptides.path.toString());
         msr.saveProperties();
         Utils.showMessage("Peptide list set as default");
         saved = true;
@@ -427,55 +418,57 @@ public class ViewPeptides extends javax.swing.JDialog {
         }
         int index = jTable1.getSelectedRow();
         msr.chromatogramType = MSReader.CHROM_TYPE_EIC;
-        Peptide temp = msr.getPeptides().elementAt(index);
+        Peptide temp = msr.peptides.elementAt(index);
         msr.XICrange = new double [] {temp.mz - 2, temp.mz + 2};
         msr.refreshChromatogram();
         dispose();
     }//GEN-LAST:event_extractActionPerformed
     
     private void addFromTxtActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addFromTxtActionPerformed
-        fc.setCurrentDirectory( msr.msreaderFiles);
+        fc.setCurrentDirectory(msr.msreaderFiles);
         fc.setFileFilter(ExtensionFilter.txtfilter);
         fc.setSelectedFile(new File(""));
         int returnVal = fc.showOpenDialog(this);
-        if ( returnVal != JFileChooser.APPROVE_OPTION ) return;
+        if (returnVal != JFileChooser.APPROVE_OPTION) return;
         File f = fc.getSelectedFile();
         try {
             BufferedReader br = new BufferedReader(new FileReader(f));
-            try {
-                String str;
-                while ( (str=br.readLine()) != null ) {
-                    String[] tiago = str.split("\t|,");
-                    if (tiago.length == 3) {
-                        try {
-                            msr.getPeptides().addPeptide (new Peptide (tiago[0],
-                                    Integer.parseInt(tiago[1]), 
-                                    Double.parseDouble(tiago[2])));
-                        } catch ( Exception e ) {
-                            throw new NumberFormatException();
-                        }
-                    } else {
-                        System.out.println("token count: "+tiago.length);
+            String str;
+            while ((str=br.readLine()) != null) {
+                String[] tiago = str.split("\t|,");
+                if (tiago.length == 3) {
+                    try {
+//                        msr.peptides.addPeptide(new Peptide(tiago[0], 
+//                                Integer.parseInt(tiago[1]), 
+//                                Double.parseDouble(tiago[2])));
+                        msr.peptides.addPeptide (new Peptide (tiago[0],
+                                Integer.parseInt(tiago[1]), 
+                                Double.parseDouble(tiago[2])));
+                    } catch (Exception e) {
                         throw new NumberFormatException();
                     }
-                } 
-            } finally {
-                br.close(); 
+                } else {
+                    System.out.println("token count: "+tiago.length);
+                    throw new NumberFormatException();
+                }
             }
-            
+            br.close();
         } catch (NumberFormatException io) {
             Utils.showErrorMessage("Error: text file is not in correct format");
-            Utils.logException( io );
+            Utils.logException(msr.bin, io);
         } catch (IOException n) {
             Utils.showErrorMessage("Error: could not read file");
-            Utils.logException( n );
+            Utils.logException(msr.bin, n);
         }
         saved = false;
         refresh();
     }//GEN-LAST:event_addFromTxtActionPerformed
 
     private void refresh() {
-        DefaultTableModel d = FormatChange.PeptidesToDTM( msr.getPeptides() );
+//        msr.peptides.sort(sorter);
+        msr.peptides.sort(sorter);
+//        DefaultTableModel d = FormatChange.PeptidesToDTM(msr.peptides); 
+        DefaultTableModel d = FormatChange.PeptidesToDTM(msr.peptides);
         jTable1.setModel(d);
         jTable1.revalidate();
     }

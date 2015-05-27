@@ -21,10 +21,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.table.DefaultTableModel;
 import org.apache.commons.lang.ArrayUtils;
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.data.xy.XYSeriesCollection;
 
 
 public class Utils {
@@ -85,10 +81,6 @@ public class Utils {
     
     public static void logException (File loc, Exception e) {
         logException (loc, e, null);
-    }
-    
-    public static void logException ( Exception e) {
-        logException ( MSReader.getInstance().bin, e, null);
     }
     
     // binary search of an array that returns the insertion point of the target
@@ -289,15 +281,11 @@ public class Utils {
         }
     }
     
-    // Gets time point in minutes based on name of file
-    // Must be named with D20Xmin(hr)
-    // Returns -1 if the name is invalid
     public static double getDeutTimePoint (String name) {
         double val = -1;
         boolean min = true;
         name = name.replaceAll("_", "."); 
-        if (name.toLowerCase().contains("hour") || 
-                name.toLowerCase().contains("hr")) {
+        if (name.toLowerCase().contains("hour") || name.toLowerCase().contains("hr")) {
             min = false;
         }
         if (name.toLowerCase().contains("h2")) val = 0; 
@@ -311,45 +299,12 @@ public class Utils {
                 val = Double.parseDouble(str);
                 if (!min) val *= 60; 
             } catch (StringIndexOutOfBoundsException e) {
-                return -1;
+                System.out.println(name);
             }
         }
         return val;
     }
-    
-    public static JFreeChart drawChart( XYSeriesCollection dataset, String title, String xlabel, String ylabel ) {
-        return ChartFactory.createXYLineChart(
-                title,
-                xlabel,
-                ylabel,
-                dataset,
-                PlotOrientation.VERTICAL,
-                false,
-                true,
-                false
-                );
-    }
-    
-    public static void normalize( double[] array ) {
-        double max = MSMath.getMax( array );
-        for ( int i = 0; i < array.length; ++i ) array[ i ] /= max;
-    }
-    
-    public static double[] doubleToPrimitive( Double[] array ) {
-        double[] prim_arr = new double[ array.length ];
-        for ( int i = 0; i < array.length; ++i ) {
-            prim_arr[ i ] = (double)array[i];
-        }
-        return prim_arr;
-    }
-    
-    public static Double[] doubleToObject( double[] array ) {
-        Double[] obj_arr = new Double[ array.length ];
-        for ( int i = 0; i < array.length; ++i ) {
-            obj_arr[ i ] = (Double)array[i];
-        }
-        return obj_arr;
-    }
+
     
     public static void main (String[] args)
     {

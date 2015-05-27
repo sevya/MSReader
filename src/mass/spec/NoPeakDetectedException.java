@@ -15,14 +15,3 @@ public class NoPeakDetectedException extends Exception{
         super(str);
     }
 }
-
-class InvalidTimePointException extends Exception{
-    
-    public InvalidTimePointException() {
-        super();
-    }
-    
-    public InvalidTimePointException(String str) {
-        super(str);
-    }
-}

@@ -1,9 +1,0 @@
-mass.spec.OxygenGenerator
-mass.spec.NitrogenGenerator
-mass.spec.Isotope
-mass.spec.HydrogenGenerator
-mass.spec.SulfurGenerator
-mass.spec.CarbonGenerator
-mass.spec.Peptide
-mass.spec.DistributionCalc
-mass.spec.AltOxygenGenerator

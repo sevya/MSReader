@@ -15,7 +15,7 @@ import org.jfree.data.xy.*;
 public class HDX_Form extends javax.swing.JFrame {
 
    String title;
-   private Peptide peptide_;
+   Peptide peptide;
    double a = 0, k = 0;
    MSReader parent;
    DecimalFormat akformat = new DecimalFormat("###.###");
@@ -69,39 +69,40 @@ public class HDX_Form extends javax.swing.JFrame {
        updateTable();
        updatePlot();
    }
-//   public HDX_Form (MSReader msr) {
-//        super("HDX Form");
-//        parent = msr;
-//        initComponents();
-//        zstate.setText("0");
-//        residues.setText("0");
-//   }
-//   
-//   public HDX_Form (MSReader msr, Peptide pept) {
-//        super("HDX Form");
-//        parent = msr;
-//        initComponents();
-//        zstate.setText("0");
-//        residues.setText("0");
-//        String[] colNames = {"time(min)", "centroid"};
-//        DefaultTableModel d = new DefaultTableModel (parent.exchange.getTable(), colNames);
-//        Utils.dtmsort(d, 0);
-//        peptide = pept;
-//        zstate.setText(""+peptide.charge);
-//        residues.setText(""+peptide.sequence.length());
-//        Exchange_Popup temp;
-//        for (Frame f : getFrames()) {
-//            if (f instanceof Exchange_Popup) {
-//                temp = (Exchange_Popup)f;
-//                if (temp.timePoint == 0) jTextField1.setText(new DecimalFormat("##.######").format(temp.score*100) + "%");
-//            }
-//        }
-//        refresh();
-//    }
+   public HDX_Form (MSReader msr) {
+        super("HDX Form");
+        parent = msr;
+        initComponents();
+        zstate.setText("0");
+        residues.setText("0");
+   }
+   
+   public HDX_Form (MSReader msr, Peptide pept) {
+        super("HDX Form");
+        parent = msr;
+        initComponents();
+        zstate.setText("0");
+        residues.setText("0");
+        String[] colNames = {"time(min)", "centroid"};
+        DefaultTableModel d = new DefaultTableModel (parent.exchange.getTable(), colNames);
+        Utils.dtmsort(d, 0);
+        peptide = pept;
+        zstate.setText(""+peptide.charge);
+        residues.setText(""+peptide.sequence.length());
+        Exchange_Popup temp;
+        for (Frame f : getFrames()) {
+            if (f instanceof Exchange_Popup) {
+                temp = (Exchange_Popup)f;
+                if (temp.timePoint == 0) jTextField1.setText(new DecimalFormat("##.######").format(temp.score*100) + "%");
+            }
+        }
+        refresh();
+    }
     
-    public void setPeptide( Peptide p ) { peptide_ = p; }
-    
-    public Peptide getPeptide() { return peptide_; }
+    public void setPeptide(Peptide p) {
+        peptide = p;
+        
+    }
 
     public void altOverlay (HDRun[] hdr) {
         expandGraph();
@@ -224,11 +225,11 @@ public class HDX_Form extends javax.swing.JFrame {
         addRegression.setVisible(false);
         XYSeries series;
         XYSeriesCollection dataset = new XYSeriesCollection();
-        peptide_ = hdr.peptide;
+        peptide = hdr.peptide;
         a = hdr.A;
         k = hdr.K;
-        zstate.setText(""+peptide_.charge);
-        residues.setText(""+peptide_.sequence.length());
+        zstate.setText(""+peptide.charge);
+        residues.setText(""+peptide.sequence.length());
         series = new XYSeries(hdr.title);
         for (int i = 0; i < hdr.exchangeValues.length; i++) {
             series.add((Double)hdr.exchangeValues[i][0], (Double)hdr.exchangeValues[i][1]);
@@ -271,6 +272,33 @@ public class HDX_Form extends javax.swing.JFrame {
     public void setTitle(String str) {
         title = str;
     }
+    
+    public void refresh() {
+        DefaultTableModel dtm = new DefaultTableModel (parent.exchange.getTable(), 
+                new String[] {"time(min)", "D/r"});
+        jTable1.setModel(dtm);
+        jTable1.revalidate();
+        XYSeries ser = parent.exchange.getXYSeries();
+        XYSeriesCollection coll = new XYSeriesCollection();
+        coll.addSeries(ser);
+        
+        final NumberAxis xAxis = new NumberAxis("time(min)");
+        final ValueAxis yAxis = new NumberAxis("D/residue");
+        final XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        renderer.setSeriesLinesVisible(0, false);
+        XYPlot plot = new XYPlot (coll, xAxis, yAxis, (XYItemRenderer)renderer);
+        plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
+        JFreeChart chart = new JFreeChart(peptide.displaySequence, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
+        
+        ChartPanel chartPanel = new ChartPanel (chart);
+        chartPanel.setPreferredSize(new java.awt.Dimension(500, 250));
+        jPanel1.removeAll();
+        jPanel1.add(chartPanel, BorderLayout.CENTER);
+        jPanel1.setVisible(true);
+        jPanel1.revalidate();
+    }
+    
+    
     
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -445,17 +473,21 @@ public class HDX_Form extends javax.swing.JFrame {
 
     private void SaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveActionPerformed
         JFileChooser fr = new JFileChooser();
+        /*File f = MSReader.root;
+        if (!f.exists()) f.mkdir();*/
         fr.setVisible(true);
-        fr.setCurrentDirectory( parent.msreaderFiles );
-        if ( peptide_ != null ) {
-            fr.setSelectedFile( new File( peptide_.displaySequence ) ); 
-        }
+        fr.setCurrentDirectory(parent.msreaderFiles);
+        if (peptide != null) {
+        fr.setSelectedFile(new File(peptide.displaySequence)); }
         File savepath;
         String path;
         int returnval = fr.showSaveDialog(this);
-        if (returnval != JFileChooser.APPROVE_OPTION) return;
-        path = fr.getSelectedFile().toString();
-        
+        if (returnval == JFileChooser.APPROVE_OPTION) {
+            savepath = fr.getSelectedFile();
+            path = savepath.toString();
+        }
+        else return; 
+        title = savepath.getName().toString();
         HDRun h = new HDRun(this);
         int opt = -1;
         
@@ -480,6 +512,7 @@ public class HDX_Form extends javax.swing.JFrame {
     }//GEN-LAST:event_SaveActionPerformed
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
+//        refresh();
         updateAll();
     }//GEN-LAST:event_updateActionPerformed
 
@@ -487,7 +520,7 @@ public class HDX_Form extends javax.swing.JFrame {
         RemoveTimePoint tp = new RemoveTimePoint(this, true);
         tp.setLocationRelativeTo(this);
         tp.setVisible(true);
-        updateAll();
+        refresh();
     }//GEN-LAST:event_removeActionPerformed
 
     private void addRegressionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addRegressionActionPerformed
@@ -523,7 +556,7 @@ public class HDX_Form extends javax.swing.JFrame {
         plot.setDataset(1, lineSeriesData);
         plot.setRenderer(1, xyLineRenderer);
         plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
-        JFreeChart chart = new JFreeChart(peptide_.displaySequence, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
+        JFreeChart chart = new JFreeChart(peptide.displaySequence, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
         equation.setText("Equation fitted to data: y = "+akformat.format(a)+"(1-e^(-"+akformat.format(k)+"t))");
         ChartPanel chartPanel = new ChartPanel (chart);
         chartPanel.setPreferredSize(new java.awt.Dimension(500, 250));
