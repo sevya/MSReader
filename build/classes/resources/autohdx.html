@@ -1,0 +1,35 @@
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body>
+        <div><h3> Auto HDX </h3>
+            Auto HDX is the fastest, most efficient way to process data. It is designed
+            for identification of well-defined peaks, in order to enable high-throughput
+            data analysis. You first select a folder containing all of the time points
+            for a given run. Next, you will select the peptide of interest from the
+            currently loaded peptide list. Once you have set all these parameters,
+            Auto HDX will go to work extracting your desired peptide. It works by picking
+            out the most abundant peak on the EIC trace within a certain range of
+            the given elution time, for the given m/z ratio. Once it has peaks for each time
+            point, a peak detection algorithm will accurately define the boundaries
+            for each peak, calculate the centroid mass for each peak, and will display an 
+            HDX form showing the mass shift over time. If a peak is not detected, or if the 
+            signal to noise ratio is too low, the peak window will leave the peak untrimmed 
+            and will display the reason for failure to detect a peak. Once the user views
+            the data and can determine whether it should be considered a peak, he/she
+            can choose to eliminate this time point (in the case there is no distinct peak), 
+            or to override the detection algorithm and trim anyway.
+            <br><br>
+            Auto HDX also has the option to include spectral processing steps to facilitate
+            peak identification/detection. If you are having trouble getting an accurate
+            peak detection, try enabling "Smooth spectrum in auto HDX" under the Options menu.
+            This makes the detection process quicker and more accurate. </div>
+    </body>
+</html>

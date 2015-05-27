@@ -2,16 +2,11 @@ package mass.spec;
 
 import java.awt.*;
 import java.text.DecimalFormat;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import org.apache.commons.lang.ArrayUtils;
 import org.jfree.chart.*;
-import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.xy.*;
 
 public class Exchange_Popup extends javax.swing.JFrame {
-    HDExchangeTimePoint parent;
+    final HDExchangeTimePoint parent;
     DecimalFormat format_ = new DecimalFormat ("####.###");
     
     public Exchange_Popup ( HDExchangeTimePoint par ) {
@@ -43,22 +38,16 @@ public class Exchange_Popup extends javax.swing.JFrame {
         XYSeries ser = parent.getDataAsXYSeries();
         XYSeriesCollection dataset = new XYSeriesCollection();
         dataset.addSeries(ser);
-        JFreeChart chart = ChartFactory.createXYLineChart(
-                Double.toString( parent.getTimePoint() )+" min",
-                "m/z",
-                "intensity",
-                dataset,
-                PlotOrientation.VERTICAL,
-                false,
-                true,
-                false
-                );
+        JFreeChart chart = Utils.drawChart( dataset, 
+                Double.toString( parent.getTimePoint() )+" min", 
+                "m/z", "intensity" );
         
         ChartPanel chartPanel = new ChartPanel (chart);
         chartPanel.setPreferredSize(new java.awt.Dimension(785, 300));
         jPanel1.removeAll();
         jPanel1.add(chartPanel, BorderLayout.CENTER);
         jPanel1.revalidate();
+        
     }
     
     private void updateTable () {

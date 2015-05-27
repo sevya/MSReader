@@ -1,31 +1,42 @@
 package mass.spec;
 
 import java.io.File;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import javax.swing.table.DefaultTableModel;
 import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
+import java.io.Serializable;
 
-/**
- * This class holds information for an HD exchange run
- * Holds a list of Mass Spectrum, names of runs, for easy analysis
- * 
- */
-public class HDExchange {
+/*
+This class holds information for the overall HD exchange experiment. This 
+encompasses individual spectra with raw data, exchange time point objects, 
+the peptide of interest to be analyzed, and an HDX Form summary graph.
+
+TODO: figure out a way to prevent all spectrum from being held twice, once in 
+the exchangeSpectra list, and again in the HDExchangeTimePoint object
+*/
+public class HDExchange implements Serializable {
     
     public ArrayList<MassSpectrum> exchangeSpectra;
     public ArrayList<HDExchangeTimePoint> exchangePoints;
     private Peptide peptide;
     private HDX_Form hdxSummary;
+    static final long serialVersionUID = 26069;
     
     public HDExchange () {
         exchangeSpectra = new ArrayList();
     }
     
+    public HDExchange ( boolean trim ) {
+        exchangeSpectra = new ArrayList();
+    }
+    
+    public void trimAllSpectra () {
+        for ( HDExchangeTimePoint timePoint : exchangePoints ) {
+            timePoint.trim();
+        }
+    }
     public ArrayList<String> getExchangeSpectraTitles () {
         ArrayList<String> temp = new ArrayList();
         for ( MassSpectrum spec : exchangeSpectra ) {
@@ -102,9 +113,10 @@ public class HDExchange {
                 double time2 = Utils.getDeutTimePoint( scan2.getRunTitle() );
                 if ( time1 > time2 ) return 1;
                 else if ( time1 < time2 ) return -1;
-                else return 0;
+                else return 0;       
             }
         });
+        exchangePoints = new ArrayList();
         for ( MassSpectrum scan : exchangeSpectra ) {
             // TODO if peakIndex is -1 this means the spectrum has no X values - 
             // find a way to handle this correctly
@@ -114,27 +126,21 @@ public class HDExchange {
                 Utils.showErrorMessage("M/z peak not found. Try again...");
                 return;
             }
+            
             int windowSize = MSReader.getInstance().getIntProperty("windowSize");
-            int startIndex = scan.peakIndex( peptide.mz - windowSize );
-            int endIndex = scan.peakIndex( peptide.mz + windowSize );
+            double[][] dataRange = scan.getWindow( peptide.mz, windowSize );
             
-            double[][] dataRange = scan.getRange( startIndex, endIndex);
-            
-            // Set up data for plotting in exchange window
-            XYSeriesCollection dataset = new XYSeriesCollection();
-            XYSeries series = FormatChange.ArrayToXYSeries( dataRange );
-            dataset.addSeries(series);
-            
-//            DecimalFormat dataformat = FormatChange.getFormat(stepSize);
-//            FormatChange.FormatArray(data[0], dataformat);
-            
-//            Exchange_Popup ep = new Exchange_Popup( dataRange, scan.getFullTitle() ); 
-//            ep.setVisible(true);
+            if ( Utils.getDeutTimePoint( scan.getRunTitle() ) == -1 ) {
+                Utils.showErrorMessage( "Error: file "+scan.getRunTitle()+" is named "
+                    + "improperly. Could not extract time point." );
+                return;
+            }
+
             HDExchangeTimePoint timePoint = new HDExchangeTimePoint( dataRange, 
                 Utils.getDeutTimePoint( scan.getRunTitle() ) 
             );
             exchangePoints.add( timePoint );
-            
+
         }
         
         for ( HDExchangeTimePoint timePoint : exchangePoints ) {
@@ -142,6 +148,7 @@ public class HDExchange {
         }
      
         hdxSummary = new HDX_Form ();
+        hdxSummary.setVisible( true );
     }
     
     public void updateSummary () {

@@ -2,21 +2,16 @@ package mass.spec;
 
 // Class for holding data related to an HD exchange time point
 
-import java.awt.BorderLayout;
-import java.awt.Frame;
-import java.text.DecimalFormat;
 import java.util.Arrays;
 import javax.swing.table.DefaultTableModel;
 import org.apache.commons.lang.ArrayUtils;
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
 
-// Holds the time point of measurement, centroid mass, difference in 
-// centroid mass from zero time point, and deuteration per residue
+/* 
+Holds the data for a single time point of measurement of HD exchange. 
+Contains the time point in minutes, centroid mass, difference in 
+centroid mass from zero time point, and deuteration per residue. 
+*/
 
 public class HDExchangeTimePoint {
     
@@ -24,16 +19,17 @@ public class HDExchangeTimePoint {
     private double[][] dataRange_;
     private double[][] tempData_;
     private double centroid_;
-//    double deltaCentroid;
     private final double timePoint_;
-//    String key;
-//    double dperr;
     
     public HDExchangeTimePoint ( //Exchange_Popup window, 
             double[][] range, double timePoint ) {
         dataRange_ = range;
         timePoint_ = timePoint;
+        // Have to calculate centroid before creating ExchangePopup window
+        // That way when it reaches up to get the values they're precalculate
+        calculateValues();
         window_ = new Exchange_Popup( this ); 
+        
     }
     
     public void showWindow () {

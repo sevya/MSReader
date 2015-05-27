@@ -2,31 +2,26 @@ package mass.spec;
 
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import javax.swing.JOptionPane;
-import javax.swing.table.DefaultTableModel;
 
 
 public class ChoosePeakNo extends javax.swing.JDialog {
 
-    DefaultTableModel d;
-    MSReader msr;
-    int sorter = 1;
-    Peptide p;
+    private final MSReader msr;
+//    private int sortKey;
+    private Peptide peptide;
     
     public ChoosePeakNo(java.awt.Frame parent, boolean modal) {
         super(parent, "Choose desired peptide", modal);
-        msr = (MSReader) parent;
         initComponents();
-        d = FormatChange.PeptidesToDTM(msr.peptides);
-        peakList.setModel(d);
+//        sortKey = 1;
+        msr = MSReader.getInstance();
+        peakList.setModel( FormatChange.PeptidesToDTM( msr.getPeptides() ) );
         peakList.getTableHeader().addMouseListener( new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                sorter = peakList.getTableHeader().columnAtPoint(e.getPoint());
-                msr.peptides.sort(sorter);
-                DefaultTableModel d = FormatChange.PeptidesToDTM(msr.peptides);
-                peakList.setModel(d);
-                peakList.revalidate();
+                int sortKey = peakList.getTableHeader().columnAtPoint(e.getPoint());
+                msr.getPeptides().setSortKey( sortKey );
+                refresh();
             }
 
             @Override
@@ -125,13 +120,18 @@ public class ChoosePeakNo extends javax.swing.JDialog {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    private void refresh() {
+        peakList.setModel( FormatChange.PeptidesToDTM( msr.getPeptides() ) );
+        peakList.revalidate();
+    }
+    
     private void getPeakFromListActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_getPeakFromListActionPerformed
         int selected = peakList.getSelectedRow();
         if (selected == -1) {
             Utils.showMessage("No peptide selected");
             return;
         }
-        p = msr.peptides.elementAt(selected);
+        peptide = msr.getPeptides().elementAt( selected );
         dispose();
     }//GEN-LAST:event_getPeakFromListActionPerformed
 
@@ -140,7 +140,7 @@ public class ChoosePeakNo extends javax.swing.JDialog {
         ep.setLocationRelativeTo(this);
         ep.setVisible(true);
         try {
-            p = ep.getPeptide();
+            peptide = ep.getPeptide();
             dispose();
         } catch (NullPointerException npe) {
             //edit peptide menu was cancelled - do nothing
@@ -148,7 +148,7 @@ public class ChoosePeakNo extends javax.swing.JDialog {
     }//GEN-LAST:event_newpeptideActionPerformed
 
     public Peptide getPeptide() {
-        return p;
+        return peptide;
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

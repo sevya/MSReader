@@ -1,0 +1,42 @@
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body>
+        <div>
+            <h3> HD Exchange </h3>
+            The HD Exchange feature allows you manually load peptide peaks from 
+            various time points to view
+            the change in molecular weight of peptides over time. First, you need to create
+            an HD exchange run. This will allow you to load the currently displayed spectrum
+            into an HD exchange. Next, load another spectrum from a different file (i.e. the 
+            next deuteration time point) to be able to view these two spectra side by side.
+            An HD exchange run requires a minimum of two time points, but can load as many as
+            are available. Once all the time points are loaded, select View HD Exchange to view
+            these spectra side by side. The program will require you to select a peptide, or enter
+            the m/z value of the peptide you are interested in viewing. It will then generate a close-up
+            of the peak representing your desired peptide for each time point, as well as a table
+            showing the data points. The program will also generate a chart showing the centroid 
+            mass of the peptide 
+        </div>
+        
+        <div>
+            <h3> Peak Detection </h3>
+            One of the major difficulties with using deuterium exchange analysis software is the 
+            difficulty detecting peaks representing peptides of interest. Frequently, peak detection
+            algorithms will confuse peptides with noise, and will not give you the peak you are looking
+            for. To avoid this problem, MS Reader includes a few different peak detection options to ensure that the peak being
+            analyzed is always the one desired by the user. Each peak window has a "Trim" button, which
+            uses a peak detection algorithm to eliminate trailing signal and focus in on the desired peak.
+            However, for a particularly difficult peak, the user has the option to manually trim out surrounding
+            noise. This way, users can quickly analyze well-separated peptides, while also precisely eliminating
+            pervasive noise.
+        </div>
+    </body>
+</html>
