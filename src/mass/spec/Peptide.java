@@ -147,12 +147,11 @@ public class Peptide implements Serializable {
     }
     
     public double[][] getNewDistribution (int reps) {
-        MersenneTwisterRNG rng = new MersenneTwisterRNG();
-        CarbonGenerator c = new CarbonGenerator(rng, element_composition[0]);
-        HydrogenGenerator h = new HydrogenGenerator(rng, element_composition[1]);
-        NitrogenGenerator n = new NitrogenGenerator(rng, element_composition[2]);
-        OxygenGenerator o = new OxygenGenerator(rng, element_composition[3]);
-        SulfurGenerator s = new SulfurGenerator(rng, element_composition[4]);
+        CarbonGenerator c = new CarbonGenerator( MSReader.getRNG(), element_composition[0]);
+        HydrogenGenerator h = new HydrogenGenerator( MSReader.getRNG(), element_composition[1]);
+        NitrogenGenerator n = new NitrogenGenerator( MSReader.getRNG(), element_composition[2]);
+        OxygenGenerator o = new OxygenGenerator( MSReader.getRNG(), element_composition[3]);
+        SulfurGenerator s = new SulfurGenerator( MSReader.getRNG(), element_composition[4]);
         mass_vector = new ArrayList();
         prob_vector = new ArrayList();
         double sum;
@@ -214,35 +213,11 @@ class DistributionCalc implements Runnable {
     }
     
     private void calculateDistribution (int r) {
-//        double frequency = 1/(double)reps;
-//        for (int i = 0; i < r; i++) {
-//            rand.setSeed(System.nanoTime());
-//            double mass = 0;
-//            for (int j = 0; j < peptide.element_composition[0]; j++) mass += carbon();
-//            for (int j = 0; j < peptide.element_composition[1]; j++) mass += hydrogen();
-//            for (int j = 0; j < peptide.element_composition[2]; j++) mass += nitrogen();
-//            for (int j = 0; j < peptide.element_composition[3]; j++) mass += oxygen();
-//            for (int j = 0; j < peptide.element_composition[4]; j++) mass += sulfur();
-//            mass += (double)(peptide.charge*Peptide.HMASS);
-//            mass /= (double)(peptide.charge);
-//            synchronized (lockObject) {
-//                int ind = mass_vector.indexOf(mass);
-//                if (ind == -1) {
-//                    mass_vector.add(mass);
-//                    prob_vector.add(frequency);
-//                } else {
-//                    double c = prob_vector.get(ind);
-//                    prob_vector.set(ind, c+frequency);
-//                }
-//            }
-//        }
-        
-        MersenneTwisterRNG rng = new MersenneTwisterRNG();
-        CarbonGenerator c = new CarbonGenerator(rng, peptide.element_composition[0]);
-        HydrogenGenerator h = new HydrogenGenerator(rng, peptide.element_composition[1]);
-        NitrogenGenerator n = new NitrogenGenerator(rng, peptide.element_composition[2]);
-        OxygenGenerator o = new OxygenGenerator(rng, peptide.element_composition[3]);
-        SulfurGenerator s = new SulfurGenerator(rng, peptide.element_composition[4]);
+        CarbonGenerator c = new CarbonGenerator(MSReader.getRNG(), peptide.element_composition[0]);
+        HydrogenGenerator h = new HydrogenGenerator(MSReader.getRNG(), peptide.element_composition[1]);
+        NitrogenGenerator n = new NitrogenGenerator(MSReader.getRNG(), peptide.element_composition[2]);
+        OxygenGenerator o = new OxygenGenerator(MSReader.getRNG(), peptide.element_composition[3]);
+        SulfurGenerator s = new SulfurGenerator(MSReader.getRNG(), peptide.element_composition[4]);
         double sum;
         double frequency = 1/(double)reps;
         for (int j = 0; j < r; j++) {
@@ -260,12 +235,11 @@ class DistributionCalc implements Runnable {
     }
     
     private void calculateDiscreteDistribution ( int r ) {
-        MersenneTwisterRNG rng = new MersenneTwisterRNG();
-        CarbonGenerator c = new CarbonGenerator(rng, peptide.element_composition[0]);
-        HydrogenGenerator h = new HydrogenGenerator(rng, peptide.element_composition[1]);
-        NitrogenGenerator n = new NitrogenGenerator(rng, peptide.element_composition[2]);
-        OxygenGenerator o = new OxygenGenerator(rng, peptide.element_composition[3]);
-        SulfurGenerator s = new SulfurGenerator(rng, peptide.element_composition[4]);
+        CarbonGenerator c = new CarbonGenerator(MSReader.getRNG(), peptide.element_composition[0]);
+        HydrogenGenerator h = new HydrogenGenerator(MSReader.getRNG(), peptide.element_composition[1]);
+        NitrogenGenerator n = new NitrogenGenerator(MSReader.getRNG(), peptide.element_composition[2]);
+        OxygenGenerator o = new OxygenGenerator(MSReader.getRNG(), peptide.element_composition[3]);
+        SulfurGenerator s = new SulfurGenerator(MSReader.getRNG(), peptide.element_composition[4]);
         double sum;
         double frequency = 1/(double)reps;
         double step = 1/(double)peptide.charge;

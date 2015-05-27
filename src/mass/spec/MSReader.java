@@ -7,27 +7,26 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import org.apache.poi.xssf.usermodel.*;
 import org.jfree.chart.*;
 import org.jfree.chart.entity.*;
-import org.jfree.chart.plot.*;
 import org.jfree.data.xy.*;
+import org.uncommons.maths.random.MersenneTwisterRNG;
 import uk.ac.ebi.jmzml.xml.io.MzMLUnmarshallerException;
         
 
 public class MSReader extends javax.swing.JFrame {
 
     public MassSpectrum currentMS;
-    public Properties properties;
+    private Properties properties;
     File documents=null, msreaderFiles=null, bin=null, temp=null;
     public ArrayList<MassSpectrum> loadedMS = new ArrayList();
     public MSChrom currentMSC = null;
-    private MSChrom tempMSC = null;
+//    private MSChrom tempMSC = null;
     public boolean smoothed = false;
-    public ArrayList<String> exchangeRunTitles = new ArrayList();
-    public ExchangePts exchange;
+//    public ArrayList<String> exchangeRunTitles = new ArrayList();
+//    public ExchangePts exchange;
     public static final int CHROM_TYPE_EIC = 2;
     public static final int CHROM_TYPE_BPC = 1;
     public static final int CHROM_TYPE_TIC = 0;
@@ -40,18 +39,21 @@ public class MSReader extends javax.swing.JFrame {
     public static final int SMOOTH_SAV_GOL = 1;
     private double stepSize;
     private SwingWorker worker;
-    public PeptideList peptides;
+    private PeptideList peptides_;
     public static final int COLOR_RED = 0;
     public static final int COLOR_BLUE = 1;
     
     // Singleton instance of MSReader
     private static MSReader instance;
     private static HDExchange hdExchangeInstance;
+    private static MersenneTwisterRNG rng;
     
     public MSReader() {
 //        try { setIconImage(ImageIO.read(getClass().getResource("/resources/C2 domain epitopes.png"))); } 
 //        catch (IOException ex) { ex.printStackTrace(); }
         instance = this;
+        // Initialize random number generator
+        rng = new MersenneTwisterRNG();
         initComponents();
         checkOS();
         checkConfig();
@@ -78,50 +80,6 @@ public class MSReader extends javax.swing.JFrame {
         fileChooser.setVisible(false);
         startUpCharts();
         populatePeptides();
-    }
-    
-    public MSReader (File command) {
-        try { setIconImage(ImageIO.read(getClass().getResource("/resources/C2 domain epitopes.png"))); } 
-        catch (IOException ex) { }
-        initComponents();
-        checkOS();
-        checkConfig();
-        setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
-        splitPane.setDividerLocation(.5);
-        splitPane.setResizeWeight(.5);
-        jPanel2.setMinimumSize(new Dimension(10, 10));
-        resize();
-        addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override
-            public void componentMoved(java.awt.event.ComponentEvent evt) {
-                resize();
-            }
-            @Override
-            public void componentResized(java.awt.event.ComponentEvent evt) {
-                resize();
-            }
-        });
-        chromOptions.setAccelerator(KeyStroke.getKeyStroke("control E"));
-        openFile.setAccelerator(KeyStroke.getKeyStroke("control O"));
-        addSpectrum.setAccelerator(KeyStroke.getKeyStroke("control A"));
-        viewHelp.setAccelerator(KeyStroke.getKeyStroke("control H"));
-        peptideList.setAccelerator(KeyStroke.getKeyStroke("control P"));
-        fileChooser.setVisible(false);
-        startUpCharts();
-        populatePeptides();
-        currentMSC = new MSChrom(command);
-        currentMS = currentMSC.spectra[0];
-        refreshChromatogram();
-        XYSeries spec = (currentMSC.SPECTRA_UNIFORM) ? 
-                FormatChange.ArrayToXYSeries(currentMSC.mz_values, currentMS.yvals) 
-                : FormatChange.ArrayToXYSeries(currentMS.msValues);
-        XYSeriesCollection specData = new XYSeriesCollection();
-        specData.addSeries(spec);
-        JFreeChart chart2 = createLineChart(currentMS.msTitle, "m/z", "intensity", specData);
-        ChartPanel chartPanel2 = new ChartPanel(chart2);
-        jPanel2.removeAll();
-        jPanel2.add(chartPanel2, BorderLayout.CENTER);
-        jPanel2.revalidate();
     }
     
     public static MSReader getInstance () {
@@ -132,6 +90,23 @@ public class MSReader extends javax.swing.JFrame {
         if ( hdExchangeInstance == null ) hdExchangeInstance = new HDExchange();
         return hdExchangeInstance;
     }
+    
+    public static MersenneTwisterRNG getRNG () {
+        if ( rng == null ) rng = new MersenneTwisterRNG();
+        return rng;
+    }
+    
+    public PeptideList getPeptides() { return peptides_; }
+    
+    public void setPeptides( PeptideList list ) { peptides_ = list; }
+    
+    public void addPeptidetoList ( Peptide pept ) { peptides_.addPeptide( pept ); }
+    
+    public void removePeptideFromList ( int index ) { peptides_.removePeptide( index ); }
+    
+    public String getProperty( String str ) { return properties.getProperty( str ); }
+    
+    public void setProperty( String key, String value ) { properties.setProperty( key, value ); }
     
     private void checkOS() {
         try {
@@ -152,19 +127,23 @@ public class MSReader extends javax.swing.JFrame {
     private void populatePeptides() {
         File peptidepath = new File (properties.getProperty("peptidepath"));
         if (!peptidepath.exists()) {
-            peptides = new PeptideList();
+            peptides_ = new PeptideList();
         } else {
             try {
-                ObjectInputStream in = new ObjectInputStream (new FileInputStream (peptidepath));
-                PeptideList pep = (PeptideList)in.readObject();
-                peptides = pep;
-                peptides.sort(1);
-                in.close();
-                } catch (IOException e) {
-                    Utils.logException(bin, e, "Could not load peptide list");
-                } catch (ClassNotFoundException ex) {
-                    Utils.logException(bin, ex, "Could not load peptide list");
+                ObjectInputStream in = new ObjectInputStream ( 
+                        new FileInputStream ( peptidepath ) 
+                );
+                try {
+                    peptides_ = (PeptideList)in.readObject();
+                    peptides_.setSortKey( 1 );
+                } finally {
+                    in.close();
                 }
+            } catch ( IOException exc ) {
+                Utils.logException( exc, "Could not load peptide list" );
+            } catch ( ClassNotFoundException ex) {
+                Utils.logException( ex, "Could not load peptide list" );
+            }
         }
     }
      
@@ -201,14 +180,20 @@ public class MSReader extends javax.swing.JFrame {
     
     public void saveProperties () {
         try {
-            properties.store(new FileOutputStream(Utils.osjoin(bin, "config.properties")), null);
-        } catch (IOException e) {
-            Utils.showErrorMessage("unable to save");
-            Utils.logException(bin, e, "Unable to save properties");
+            FileOutputStream out = new FileOutputStream( 
+                    Utils.osjoin( bin, "config.properties") );
+            try {
+                properties.store(new FileOutputStream(Utils.osjoin(bin, "config.properties")), null);
+            } finally {
+                out.close();
+            }
+        } catch ( IOException exc ) {
+            Utils.showErrorMessage( "Unable to save properties" );
+            Utils.logException( exc, "Unable to save properties");
         }
     }
     
-    public int getIntProperty (String key) {
+    public int getIntProperty ( String key ) {
         return Integer.parseInt(properties.getProperty(key));
     }
     
@@ -233,9 +218,9 @@ public class MSReader extends javax.swing.JFrame {
         jTextField1.setLocation(jLabel1.getX() + jLabel1.getWidth() + 5, jLabel1.getY());
     }
     
-   public void setExchangePt (String key, double centroid) {
-       exchange.changePt(key, centroid);
-   }
+//   public void setExchangePt (String key, double centroid) {
+//       exchange.changePt(key, centroid);
+//   }
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -258,13 +243,12 @@ public class MSReader extends javax.swing.JFrame {
         file = new javax.swing.JMenu();
         openFile = new javax.swing.JMenuItem();
         peptideList = new javax.swing.JMenuItem();
-        jMenuItem4 = new javax.swing.JMenuItem();
-        jMenuItem1 = new javax.swing.JMenuItem();
+        clearAllWindows = new javax.swing.JMenuItem();
+        checkPeptideAccuracy = new javax.swing.JMenuItem();
         closeFrame = new javax.swing.JMenuItem();
-        jMenuItem5 = new javax.swing.JMenuItem();
         editMenuBar = new javax.swing.JMenu();
         smoothSpectrum = new javax.swing.JMenuItem();
-        jMenuItem3 = new javax.swing.JMenuItem();
+        exportToCSV = new javax.swing.JMenuItem();
         smoothingOptions = new javax.swing.JMenuItem();
         chromOptions = new javax.swing.JMenuItem();
         hdExchangeMenu = new javax.swing.JMenu();
@@ -361,23 +345,23 @@ public class MSReader extends javax.swing.JFrame {
         });
         file.add(peptideList);
 
-        jMenuItem4.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W, java.awt.event.InputEvent.SHIFT_MASK | java.awt.event.InputEvent.CTRL_MASK));
-        jMenuItem4.setText("Clear Windows");
-        jMenuItem4.setToolTipText("Close all external windows");
-        jMenuItem4.addActionListener(new java.awt.event.ActionListener() {
+        clearAllWindows.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W, java.awt.event.InputEvent.SHIFT_MASK | java.awt.event.InputEvent.CTRL_MASK));
+        clearAllWindows.setText("Clear Windows");
+        clearAllWindows.setToolTipText("Close all external windows");
+        clearAllWindows.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItem4ActionPerformed(evt);
+                clearAllWindowsActionPerformed(evt);
             }
         });
-        file.add(jMenuItem4);
+        file.add(clearAllWindows);
 
-        jMenuItem1.setText("Check peptide accuracy");
-        jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
+        checkPeptideAccuracy.setText("Check peptide accuracy");
+        checkPeptideAccuracy.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItem1ActionPerformed(evt);
+                checkPeptideAccuracyActionPerformed(evt);
             }
         });
-        file.add(jMenuItem1);
+        file.add(checkPeptideAccuracy);
 
         closeFrame.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0));
         closeFrame.setText("Close");
@@ -388,14 +372,6 @@ public class MSReader extends javax.swing.JFrame {
             }
         });
         file.add(closeFrame);
-
-        jMenuItem5.setText("Open MZML file");
-        jMenuItem5.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItem5ActionPerformed(evt);
-            }
-        });
-        file.add(jMenuItem5);
 
         fileMenuBar.add(file);
 
@@ -409,14 +385,14 @@ public class MSReader extends javax.swing.JFrame {
         });
         editMenuBar.add(smoothSpectrum);
 
-        jMenuItem3.setText("Export spectrum to CSV");
-        jMenuItem3.setToolTipText("Export currently loaded spectrum");
-        jMenuItem3.addActionListener(new java.awt.event.ActionListener() {
+        exportToCSV.setText("Export spectrum to CSV");
+        exportToCSV.setToolTipText("Export currently loaded spectrum");
+        exportToCSV.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItem3ActionPerformed(evt);
+                exportToCSVActionPerformed(evt);
             }
         });
-        editMenuBar.add(jMenuItem3);
+        editMenuBar.add(exportToCSV);
 
         smoothingOptions.setText("Options");
         smoothingOptions.addActionListener(new java.awt.event.ActionListener() {
@@ -598,19 +574,19 @@ public class MSReader extends javax.swing.JFrame {
                         .addComponent(peak, javax.swing.GroupLayout.PREFERRED_SIZE, 21, javax.swing.GroupLayout.PREFERRED_SIZE))))
         );
 
-        java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
-        setBounds((screenSize.width-1332)/2, (screenSize.height-722)/2, 1332, 722);
+        setSize(new java.awt.Dimension(1332, 722));
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
      
     private void startUpCharts() {
         XYSeriesCollection dataset = new XYSeriesCollection();
-        JFreeChart chart = createLineChart("Load a CDF file to begin...","time","",dataset);
+        JFreeChart chart = Utils.drawChart( dataset, "Load a CDF file to begin...","time","" );
         ChartPanel chartPanel = new ChartPanel (chart);
         chartPanel.setPreferredSize(new java.awt.Dimension(785, 440));
         jPanel1.removeAll();
         jPanel1.add(chartPanel, BorderLayout.CENTER);
         jPanel1.revalidate();      
-        JFreeChart chart2 = createLineChart("Spectrum", "m/z", "", dataset);
+        JFreeChart chart2 = Utils.drawChart( dataset, "Spectrum", "m/z", "" );
         ChartPanel chartPanel2 = new ChartPanel(chart2);
         jPanel2.add(chartPanel2, BorderLayout.CENTER);
         jPanel2.revalidate();
@@ -624,7 +600,7 @@ public class MSReader extends javax.swing.JFrame {
         if (chromatogramType == CHROM_TYPE_TIC) {
             XYSeriesCollection dataset = new XYSeriesCollection();
             dataset.addSeries(FormatChange.ArrayToXYSeries(currentMSC.TIC));
-            JFreeChart chart = createLineChart(currentMSC.title + " Total Ion Chromatogram","time(min)","",dataset);
+            JFreeChart chart = Utils.drawChart( dataset, currentMSC.title + " Total Ion Chromatogram","time(min)","" );
             ChartPanel chartPanel = new ChartPanel (chart);
             chartPanel.setPreferredSize(new java.awt.Dimension(785, 440));
             jPanel1.removeAll();
@@ -646,7 +622,8 @@ public class MSReader extends javax.swing.JFrame {
                         else spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
                         specData.removeAllSeries();
                         specData.addSeries(spec);
-                        JFreeChart chart2 = createLineChart(cf.spectra[iindex].msTitle, "m/z", "intensity", specData);
+                        JFreeChart chart2 = Utils.drawChart( specData, cf.spectra[iindex].msTitle, 
+                                "m/z", "intensity");
                         ChartPanel chartPanel2 = new ChartPanel(chart2);
                         chartPanel2.setMouseWheelEnabled(false);
                         jPanel2.add(chartPanel2, BorderLayout.CENTER);
@@ -664,7 +641,7 @@ public class MSReader extends javax.swing.JFrame {
             double[][] bpc = currentMSC.getBPC();
             XYSeriesCollection dataset = new XYSeriesCollection();
             dataset.addSeries(FormatChange.ArrayToXYSeries(bpc));
-            JFreeChart chart = createLineChart(currentMSC.title + " Base Peak Chromatogram","time(min)","",dataset);
+            JFreeChart chart = Utils.drawChart( dataset, currentMSC.title + " Base Peak Chromatogram","time(min)","" );
             ChartPanel chartPanel = new ChartPanel (chart);
             chartPanel.setPreferredSize(new java.awt.Dimension(785, 440));
             jPanel1.removeAll();
@@ -679,7 +656,7 @@ public class MSReader extends javax.swing.JFrame {
                 spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
             }
             specData.addSeries(spec);
-            JFreeChart chart2 = createLineChart(currentMS.msTitle, "m/z", "intensity", specData);
+            JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
             ChartPanel cp = new ChartPanel(chart2);
             cp.setMouseWheelEnabled(false);
             jPanel2.add(cp, BorderLayout.CENTER);
@@ -701,7 +678,7 @@ public class MSReader extends javax.swing.JFrame {
                         }
                         specData.removeAllSeries();
                         specData.addSeries(spec);
-                        JFreeChart chart2 = createLineChart(currentMS.msTitle, "m/z", "intensity", specData);
+                        JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
                         ChartPanel chartPanel2 = new ChartPanel(chart2);
                         chartPanel2.setMouseWheelEnabled(false);
                         jPanel2.add(chartPanel2, BorderLayout.CENTER);
@@ -719,7 +696,7 @@ public class MSReader extends javax.swing.JFrame {
             double[][] eic = currentMSC.getEIC(XICrange[0], XICrange[1]);
             XYSeriesCollection dataset = new XYSeriesCollection();
             dataset.addSeries(FormatChange.ArrayToXYSeries(eic));
-            JFreeChart chart = createLineChart(currentMSC.title + " EIC Range " + XICrange[0] + "-" + XICrange[1],"time(min)","",dataset);
+            JFreeChart chart = Utils.drawChart( dataset, currentMSC.title + " EIC Range " + XICrange[0] + "-" + XICrange[1],"time(min)","" );
             ChartPanel chartPanel = new ChartPanel(chart);
             chartPanel.setPreferredSize(new java.awt.Dimension(785, 440));
             jPanel1.removeAll();
@@ -735,7 +712,7 @@ public class MSReader extends javax.swing.JFrame {
             }
             
             specData.addSeries(spec);
-            JFreeChart chart2 = createLineChart(currentMS.msTitle, "m/z", "intensity", specData);
+            JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
             ChartPanel cp = new ChartPanel(chart2);
             cp.setMouseWheelEnabled(false);
             jPanel2.add(cp, BorderLayout.CENTER);
@@ -757,7 +734,7 @@ public class MSReader extends javax.swing.JFrame {
                         }
                         specData.removeAllSeries();
                         specData.addSeries(spec);
-                        JFreeChart chart2 = createLineChart(currentMS.msTitle, "m/z", "intensity", specData);
+                        JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
                         ChartPanel chartPanel2 = new ChartPanel(chart2);
                         chartPanel2.setMouseWheelEnabled(false);
                         jPanel2.add(chartPanel2, BorderLayout.CENTER);
@@ -802,6 +779,7 @@ public class MSReader extends javax.swing.JFrame {
                     currentMSC = new MSChrom(f, file_type);
                 } catch ( MzMLUnmarshallerException exc ) {
                     Utils.showErrorMessage("Error reading MZML file");
+                    return null;
                 }
                 if (autoBSB) {
                     try {
@@ -824,7 +802,7 @@ public class MSReader extends javax.swing.JFrame {
                     spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
                 }
                 specData.addSeries(spec);
-                JFreeChart chart2 = createLineChart(currentMS.msTitle, "m/z", "intensity", specData);
+                JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
                 ChartPanel chartPanel2 = new ChartPanel(chart2);
                 jPanel2.removeAll();
                 jPanel2.add(chartPanel2, BorderLayout.CENTER);
@@ -874,7 +852,7 @@ public class MSReader extends javax.swing.JFrame {
                         : FormatChange.ArrayToXYSeries(currentMS.msValues);
                     XYSeriesCollection dataset = new XYSeriesCollection();
                     dataset.addSeries(series);
-                    JFreeChart chart = createLineChart(currentMS.msTitle, "m/z", "", dataset); 
+                    JFreeChart chart = Utils.drawChart( dataset, currentMS.msTitle, "m/z", "" ); 
                     ChartPanel chartPanel = new ChartPanel (chart);
                     jPanel2.removeAll();
                     jPanel2.add(chartPanel, BorderLayout.CENTER);
@@ -894,7 +872,7 @@ public class MSReader extends javax.swing.JFrame {
                         : FormatChange.ArrayToXYSeries(currentMS.msValues);
                     XYSeriesCollection dataset = new XYSeriesCollection();
                     dataset.addSeries(series);
-                    JFreeChart chart = createLineChart(currentMS.msTitle, "m/z", "", dataset); 
+                    JFreeChart chart = Utils.drawChart( dataset, currentMS.msTitle, "m/z", "" ); 
                     ChartPanel chartPanel = new ChartPanel (chart);
                     jPanel2.removeAll();
                     jPanel2.add(chartPanel, BorderLayout.CENTER);
@@ -929,7 +907,7 @@ public class MSReader extends javax.swing.JFrame {
                     : FormatChange.ArrayToXYSeries(currentMS.msValues);
             XYSeriesCollection dataset = new XYSeriesCollection();
             dataset.addSeries(series);
-            JFreeChart chart = createLineChart(currentMS.msTitle, "m/z", "intensity", dataset); 
+            JFreeChart chart = Utils.drawChart( dataset, currentMS.msTitle, "m/z", "intensity" ); 
             ChartPanel chartPanel = new ChartPanel (chart);
             jPanel2.removeAll();
             jPanel2.add(chartPanel, BorderLayout.CENTER);
@@ -1033,7 +1011,7 @@ public class MSReader extends javax.swing.JFrame {
         
         XYSeriesCollection specData = new XYSeriesCollection();
         specData.addSeries(spec);
-        JFreeChart chart2 = createLineChart(currentMS.msTitle, "m/z", "intensity", specData);
+        JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
         ChartPanel chartPanel2 = new ChartPanel(chart2);
         chartPanel2.setPreferredSize(new java.awt.Dimension(785, 440));
         jPanel2.removeAll();
@@ -1059,20 +1037,7 @@ public class MSReader extends javax.swing.JFrame {
         hdExchangeInstance.setPeptide( current );
         hdExchangeInstance.analyze();
     }//GEN-LAST:event_viewHDExchangeMenuActionPerformed
-    
-    private JFreeChart createLineChart(String title, String xlabel, String ylabel, XYSeriesCollection dataset) {
-        JFreeChart chart = ChartFactory.createXYLineChart(
-                title,
-                xlabel,
-                ylabel,
-                dataset,
-                PlotOrientation.VERTICAL,
-                false,
-                true,
-                false
-                );
-        return chart;
-    }
+
         
     private void chromOptionsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chromOptionsActionPerformed
         Chromatogram_Options cho = new Chromatogram_Options(this, true);
@@ -1082,12 +1047,12 @@ public class MSReader extends javax.swing.JFrame {
     }//GEN-LAST:event_chromOptionsActionPerformed
 
     private void peptideListActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_peptideListActionPerformed
-        if (peptides == null) {
-            peptides = new PeptideList();
+        if ( peptides_ == null ) {
+            peptides_ = new PeptideList();
         }
-        ViewPeptides pl = new ViewPeptides(this, true);
-        pl.setLocationRelativeTo(this);
-        pl.setVisible(true);
+        ViewPeptides pl = new ViewPeptides( this, true );
+        pl.setLocationRelativeTo( this );
+        pl.setVisible( true );
     }//GEN-LAST:event_peptideListActionPerformed
 
     private void openHDXActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_openHDXActionPerformed
@@ -1318,7 +1283,7 @@ public class MSReader extends javax.swing.JFrame {
         hp.setVisible(true);
     }//GEN-LAST:event_viewHelpActionPerformed
 
-    private void jMenuItem3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem3ActionPerformed
+    private void exportToCSVActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exportToCSVActionPerformed
         if (currentMS == null) {
             Utils.showErrorMessage("No spectrum loaded");
             return;
@@ -1381,14 +1346,14 @@ public class MSReader extends javax.swing.JFrame {
             }
         };
         worker.execute();
-    }//GEN-LAST:event_jMenuItem3ActionPerformed
+    }//GEN-LAST:event_exportToCSVActionPerformed
 
-    private void jMenuItem4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem4ActionPerformed
+    private void clearAllWindowsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clearAllWindowsActionPerformed
         Frame[] f = Frame.getFrames();
         for (Frame fr: f) {
             if (fr != this) fr.dispose(); 
         }
-    }//GEN-LAST:event_jMenuItem4ActionPerformed
+    }//GEN-LAST:event_clearAllWindowsActionPerformed
 
     private void abortActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_abortActionPerformed
         
@@ -1396,16 +1361,33 @@ public class MSReader extends javax.swing.JFrame {
     }//GEN-LAST:event_abortActionPerformed
 
     private void autoHDXActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_autoHDXActionPerformed
-        performHDX(true);
+        performHDX( true );
     }//GEN-LAST:event_autoHDXActionPerformed
 
-    private void performHDX (final boolean trim) {
-        AutoHDXSetup a = new AutoHDXSetup(this, true);
-        String str = (trim) ? "Choose files for Auto HDX" : "Choose files for Manual HDX";
-        a.setTitle (str);
+    private void manualHDXActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_manualHDXActionPerformed
+        performHDX( false );
+    }//GEN-LAST:event_manualHDXActionPerformed
+
+    /* 
+    Performs semi-automatic HD exchange. User selects a folder full of 
+    data files for each time point, and each one is opened, extracted
+    for the peptide of interest, trimmed (if the boolean variable auto is
+    true), and combined to show a full HD exchange plot.  
+    */
+    private void performHDX ( final boolean auto ) {
+        AutoHDXSetup a = new AutoHDXSetup( this, true );
+        a.setTitle ( (auto) ? 
+                "Choose files for Auto HDX" : "Choose files for Manual HDX" );
         a.setLocationRelativeTo(this);
         a.setVisible(true);
         final File[] files = a.getFiles();
+        for ( File f : files ) {
+            if ( Utils.getDeutTimePoint(f.toString()) == -1 ) {
+                Utils.showErrorMessage( "Error: file "+f.toString()+" is named "
+                    + "improperly. Could not extract time point." );
+                return;
+            }
+        }
         if (files.length == 0) return;
         Arrays.sort(files, new Comparator<File>() {
             @Override
@@ -1422,35 +1404,38 @@ public class MSReader extends javax.swing.JFrame {
         final Peptide pept = cpn.getPeptide();
         if (pept == null) return;
         final LoadingDialog ld = new LoadingDialog(null, false);
-        final MSReader msr = this;
-        exchange = new ExchangePts();
-        exchange.setPeptide(pept);
-        if (currentMSC != null) tempMSC = currentMSC.copy();
+        
+        hdExchangeInstance = new HDExchange();
+        hdExchangeInstance.setPeptide( pept );
+        
+        // Saves current MSC to place back on the screen after running auto hdx
+        // May be unnecessary and take up a lot of memory
+//        if (currentMSC != null) tempMSC = currentMSC.copy();
         worker = new SwingWorker<Void, Void>() {
             @Override
-            protected Void doInBackground() {
-                int elutionindex;
+            protected Void doInBackground() throws MzMLUnmarshallerException {
+                int elutionIndex;
                 double [][] eic; 
-                Exchange_Popup ep;
-                for (File f : files) {
-                    currentMSC = new MSChrom(f);
+                String extension = "";
+                for ( File f : files ) {
+                    System.out.println("Processing "+f.toString());
+                    if ( f.toString().toLowerCase().endsWith(".cdf") ) extension = "CDF";
+                    else if ( f.toString().toLowerCase().endsWith(".mzml" ) ) extension = "MZML";
                     try {
-                        Utils.getDeutTimePoint(f.toString());
-                    } catch (StringIndexOutOfBoundsException str) {
-                        Utils.showErrorMessage("Error - file is improperly named");
+                        currentMSC = new MSChrom( f, extension );
+                    } catch ( MzMLUnmarshallerException exc ) {
+                        Utils.showErrorMessage( "Error reading file" );
+                        return null;
                     }
+                    
+                    //If zero time point change XIC parameters
                     if ( Utils.getDeutTimePoint(f.toString()) == 0) eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
                     else eic = (pept.mz > 1000) ? currentMSC.getEIC(pept.mz - 1, pept.mz + 5): 
                             currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
-                    elutionindex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
-                    if (autoBSB) {
-                        try {
-                            currentMSC.backgroundSubtraction(controlScan, elutionindex);
-                        } catch (DifferentResolutionsException cdr) {
-                            Utils.showMessage("Background subtraction not completed. " + cdr.getMessage());
-                        }
-                    }
-                    currentMS = currentMSC.spectra[elutionindex];
+                    elutionIndex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
+
+                    currentMS = currentMSC.spectra[ elutionIndex ];
+                    
                     if (autoSmooth) {
                         switch (getIntProperty("smoothType")) {
                             case 0:
@@ -1461,44 +1446,10 @@ public class MSReader extends javax.swing.JFrame {
                                 break;
                         }
                     }
-                    int peakIndex, startIndex, endIndex;
-                    XYSeries series;
-                    int windowSize = getIntProperty("windowSize");
-                    if (currentMS.msValues == null) {
-                        peakIndex = Utils.binarySearch(currentMSC.mz_values, pept.mz);
-                        stepSize = currentMSC.mz_values[50] - currentMSC.mz_values[49];
-                        startIndex = peakIndex - (int) (windowSize/stepSize);
-                        if (startIndex < 0) startIndex = 0; 
-                        endIndex = peakIndex + (int) (windowSize/stepSize);
-                        if (endIndex >= currentMSC.mz_values.length) endIndex = currentMSC.mz_values.length - 1;
-                        series = FormatChange.ArrayToXYSeries(currentMSC.mz_values, currentMS.yvals, startIndex, endIndex);
-                    } else {
-                        peakIndex = Utils.binarySearch(currentMS.msValues[0], pept.mz);
-                        stepSize = currentMS.msValues[0][50] - currentMS.msValues[0][49];
-                        startIndex = peakIndex - (int) (windowSize/stepSize);
-                        if (startIndex < 0) startIndex = 0; 
-                        endIndex = peakIndex + (int) (windowSize/stepSize);
-                        if (endIndex >= currentMS.msValues[0].length) endIndex = currentMS.msValues[0].length - 1; 
-                        series = FormatChange.ArrayToXYSeries(currentMS.msValues, startIndex, endIndex);
-                    }
-                    XYSeriesCollection dataset = new XYSeriesCollection();
-                    dataset.addSeries(series);   
-                    DecimalFormat dataformat = FormatChange.getFormat(stepSize);
                     
-                    double[][] data = new double[2][endIndex - startIndex];
-                    if (currentMS.msValues == null) {
-                        data[0] = Arrays.copyOfRange(currentMSC.mz_values, startIndex, endIndex);
-                        data[1] = Arrays.copyOfRange(currentMS.yvals, startIndex, endIndex);
-                    } else {
-                        data[0] = Arrays.copyOfRange(currentMS.msValues[0], startIndex, endIndex);
-                        data[1] = Arrays.copyOfRange(currentMS.msValues[1], startIndex, endIndex);
-                    }
-                    FormatChange.FormatArray(data[0], dataformat);
-                    String title = currentMS.runTitle + " " + currentMS.msTitle;
-                    ep = new Exchange_Popup( data, pept, title ); 
-                    if (trim) ep.trim();
-                    ep.setVisible(true);
-                    exchange.addTimePoint(ep.timePoint, ep.cent, ep.title); 
+                    hdExchangeInstance.addSpectrum( currentMS );
+                    
+                    // Erase current chromatogram to save space
                     currentMSC = null;
                 }
               return null;  
@@ -1518,10 +1469,16 @@ public class MSReader extends javax.swing.JFrame {
                     Utils.logException(bin, e, "Cancellation error during auto hdx");
                     return;
                 }
-                HDX_Form hdx = new HDX_Form(msr, pept);
-                hdx.setPeptide(pept);
-                hdx.setVisible(true);
-                if (tempMSC!= null) currentMSC = tempMSC.copy();
+
+                hdExchangeInstance.analyze();
+                
+                getHDExchangeInstance().updateSummary();
+                
+                // Cycle through all time points and trim if AutoHDX
+                if ( auto ) hdExchangeInstance.trimAllSpectra();
+                
+                // Restore the chromatogram from the start
+//                if ( tempMSC!= null ) currentMSC = tempMSC.copy();
                 refreshChromatogram();
                 ld.dispose();
                 resize();
@@ -1530,12 +1487,8 @@ public class MSReader extends javax.swing.JFrame {
         ld.setVisible(true);
         worker.execute();
     }
-    
-    private void manualHDXActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_manualHDXActionPerformed
-          performHDX(false);
-    }//GEN-LAST:event_manualHDXActionPerformed
-
-    private void jMenuItem1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem1ActionPerformed
+     
+    private void checkPeptideAccuracyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_checkPeptideAccuracyActionPerformed
         if (currentMSC == null) {
             Utils.showErrorMessage("Please load file first");
             return;
@@ -1544,68 +1497,45 @@ public class MSReader extends javax.swing.JFrame {
         cpn.setLocationRelativeTo(this);
         cpn.setVisible(true);
         final Peptide pept = cpn.getPeptide();
-        if (pept == null) return;
+        if ( pept == null ) return;
         double[][] eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
         int elutionindex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
         currentMS = currentMSC.spectra[elutionindex];
-        int peakIndex, startIndex, endIndex;
-        int windowSize = getIntProperty("windowSize");
-        if (currentMS.msValues == null) {
-            peakIndex = Utils.binarySearch(currentMSC.mz_values, pept.mz);
-            if (peakIndex >= currentMSC.mz_values.length) peakIndex = currentMSC.mz_values.length - 1;
-            stepSize = currentMSC.mz_values[50] - currentMSC.mz_values[49];
-            startIndex = peakIndex - (int) (windowSize/stepSize);
-            if (startIndex < 0) startIndex = 0; 
-            endIndex = peakIndex + (int) (windowSize/stepSize);
-            if (endIndex > currentMSC.mz_values.length) endIndex = currentMSC.mz_values.length - 1; 
-        } else {
-            peakIndex = Utils.binarySearch(currentMS.msValues[0], pept.mz);
-            if (peakIndex > currentMS.msValues[0].length) peakIndex = currentMS.msValues[0].length - 1;
-            stepSize = currentMS.msValues[0][50] - currentMS.msValues[0][49];
-            startIndex = peakIndex - (int) (windowSize/stepSize);
-            if (startIndex < 0) startIndex = 0; 
-            endIndex = peakIndex + (int) (windowSize/stepSize);
-            if (endIndex > currentMS.msValues[0].length) endIndex = currentMS.msValues[0].length - 1; 
-        }
+
+        currentMS.convertToNonUniform( currentMSC );
+        int windowSize = MSReader.getInstance().getIntProperty("windowSize");
+        
+        double[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
+            
         double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 6));
-        double max = currentMS.getYMax (startIndex, endIndex); 
-        max /= MSMath.getMax(isotope[1]);
+        
+        // Normalize the isotopic distribution percentages
+        double max = MSMath.getMax ( dataRange[ 1 ] ); 
+        max /= MSMath.getMax( isotope[1] );
         for (int i = 0; i < isotope[1].length; i++) isotope[1][i] *= max;
-        XYSeries series = (currentMS.msValues == null) ? 
-                FormatChange.ArrayToXYSeries(currentMSC.mz_values, currentMS.yvals, startIndex, endIndex, "data") 
-                : FormatChange.ArrayToXYSeries(currentMS.msValues, startIndex, endIndex, "data");
-        XYSeries tope = FormatChange.ArrayToXYSeries(isotope, "tope");
+        
+        XYSeries dataSeries = FormatChange.ArrayToXYSeries( dataRange ); 
+        
+        XYSeries isotopeSeries = FormatChange.ArrayToXYSeries(isotope, "tope");
+        
+        // Hack to force lines to go back to zero on either side of isotopic peak
         for (int i = 0; i < isotope[0].length; i++) {
-            tope.add(isotope[0][i], 0.0);
-            tope.add(isotope[0][i], Double.NaN);
+            isotopeSeries.add( isotope[0][i], 0.0 );
+            isotopeSeries.add( isotope[0][i], Double.NaN );
         }
+        
         XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries(tope);
-        dataset.addSeries(series);
-        JFreeChart chart = ChartFactory.createXYLineChart(
-                pept.displaySequence,
-                "m/z",
-                "intensity",
-                dataset,
-                PlotOrientation.VERTICAL,
-                false,
-                true,
-                false
-                );
-        
-        double[][] data = new double [2][];
-        data[0] = (currentMS.msValues == null) ? Arrays.copyOfRange(currentMSC.mz_values, startIndex, endIndex) 
-                : Arrays.copyOfRange(currentMS.msValues[0], startIndex, endIndex);
-        data[1] = (currentMS.msValues == null) ? Arrays.copyOfRange(currentMS.yvals, startIndex, endIndex) 
-                : Arrays.copyOfRange(currentMS.msValues[1], startIndex, endIndex);
-        
+        dataset.addSeries( dataSeries );
+        dataset.addSeries( isotopeSeries );
+        JFreeChart chart = Utils.drawChart( dataset, pept.displaySequence, 
+                "m/z","intensity" );
         
         Peak_Zoom pz = new Peak_Zoom();
         pz.setChart(chart);
         pz.expandGraph();
-        pz.setTitle(MSMath.getScore(data, isotope)+"");
+        pz.setTitle( MSMath.getScore( dataRange, isotope ) + "" );
         pz.setVisible(true);
-    }//GEN-LAST:event_jMenuItem1ActionPerformed
+    }//GEN-LAST:event_checkPeptideAccuracyActionPerformed
 
     private void sequenceEngineActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_sequenceEngineActionPerformed
         SequenceEngine eng = new SequenceEngine(this);
@@ -1831,75 +1761,6 @@ public class MSReader extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_jMenuItem2ActionPerformed
 
-    private void jMenuItem5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem5ActionPerformed
-        smoothed = false;
-        fileChooser.setFileFilter(ExtensionFilter.mzmlfilter);
-        fileChooser.setCurrentDirectory(documents);
-        fileChooser.setSelectedFile(new File(""));
-        fileChooser.setVisible(true);
-        int returnVal = fileChooser.showOpenDialog(this);
-        if (returnVal != JFileChooser.APPROVE_OPTION) return;
-        final File f = fileChooser.getSelectedFile();
-        setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-        if (f.toString().toLowerCase().endsWith(".mzml") == false) {
-            Utils.showErrorMessage("Error: not a valid MZML file");
-            setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-            return;
-        }
-        final LoadingDialog ld = new LoadingDialog(this, false);
-        ld.setLocationRelativeTo(this);
-        ld.setVisible(true);
-        worker = new SwingWorker<Void, Void>() {
-            @Override
-            protected Void doInBackground() throws MzMLUnmarshallerException {
-                currentMSC = new MSChrom(f, "MZML");
-                if (autoBSB) {
-                    try {
-                        currentMSC.backgroundSubtraction(controlScan);
-                    } catch (DifferentResolutionsException e) {
-                        Utils.showErrorMessage("Could not subtract background - "
-                                + "make sure control and sample have "
-                                + " same resolution");
-                    } 
-                }
-                refreshChromatogram();
-                final XYSeriesCollection specData = new XYSeriesCollection();
-                currentMS = currentMSC.spectra[0];
-                XYSeries spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
-//                if (currentMSC.SPECTRA_UNIFORM) {
-//                    stepSize = currentMSC.mz_values[50] - currentMSC.mz_values[49];
-//                    spec = FormatChange.ArrayToXYSeries(currentMSC.mz_values, currentMS.yvals);
-//                } else {
-//                    stepSize = currentMS.msValues[0][50] - currentMS.msValues[0][49];
-//                    spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
-//                }
-                specData.addSeries(spec);
-                JFreeChart chart2 = createLineChart(currentMS.msTitle, "m/z", "intensity", specData);
-                ChartPanel chartPanel2 = new ChartPanel(chart2);
-                jPanel2.removeAll();
-                jPanel2.add(chartPanel2, BorderLayout.CENTER);
-                jPanel2.revalidate();
-                refreshChromatogram();
-                return null; 
-            }
-            @Override
-            protected void done() {
-                try  {
-                    ld.dispose();
-                    get();
-                } catch ( InterruptedException ex ) {
-                    Utils.showErrorMessage("Process cancelled"); 
-                    Utils.logException(bin, ex, "Cancellation error while loading file");
-                } catch ( ExecutionException e ) {
-                    Utils.showErrorMessage("Process cancelled"); 
-                    Utils.logException(bin, e, "Cancellation error while loading file");   
-                }
-            }
-        };
-        worker.execute();
-        setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-    }//GEN-LAST:event_jMenuItem5ActionPerformed
-
     public HeatMapGradient getGradient () {
         if (properties.getProperty("gradientpath").equals("")) initGradient();
         if (!new File (properties.getProperty("gradientpath")).exists()) initGradient();
@@ -1950,9 +1811,6 @@ public class MSReader extends javax.swing.JFrame {
     
 
     public static void main(String args[]) {
-        String command = "";
-        if (args.length != 0) command = args[0];
-        final String fcommand = command;
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (ClassNotFoundException ex) {
@@ -1973,11 +1831,7 @@ public class MSReader extends javax.swing.JFrame {
                 } catch (InterruptedException ie) {
                     
                 }*/
-                if (new File(fcommand).exists()) {
-                    new MSReader(new File(fcommand)).setVisible(true);
-                } else {
-                    new MSReader().setVisible(true);
-                }
+                new MSReader().setVisible(true);
             }
         });
     }
@@ -1992,11 +1846,14 @@ public class MSReader extends javax.swing.JFrame {
     private javax.swing.JMenuItem abort;
     private javax.swing.JMenuItem addSpectrum;
     private javax.swing.JMenuItem autoHDX;
+    private javax.swing.JMenuItem checkPeptideAccuracy;
     private javax.swing.JMenuItem chromOptions;
+    private javax.swing.JMenuItem clearAllWindows;
     private javax.swing.JMenuItem closeFrame;
     private javax.swing.JMenu editMenuBar;
     private javax.swing.JMenu experimentalMenu;
     private javax.swing.JMenuItem exportHDXToExcel;
+    private javax.swing.JMenuItem exportToCSV;
     private javax.swing.JMenu file;
     private javax.swing.JFileChooser fileChooser;
     private javax.swing.JMenuBar fileMenuBar;
@@ -2004,11 +1861,7 @@ public class MSReader extends javax.swing.JFrame {
     private javax.swing.JMenu hdExchangeMenu;
     private javax.swing.JMenu help;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JMenuItem jMenuItem1;
     private javax.swing.JMenuItem jMenuItem2;
-    private javax.swing.JMenuItem jMenuItem3;
-    private javax.swing.JMenuItem jMenuItem4;
-    private javax.swing.JMenuItem jMenuItem5;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;

@@ -86,19 +86,30 @@ public class MSChrom {
         MzMLUnmarshaller unmarshaller = new MzMLUnmarshaller(mzml);
         Iterator<String> iter = unmarshaller.getChromatogramIDs().iterator();
         Chromatogram chrom = unmarshaller.getChromatogramById(iter.next());
+        
         Number[] time = chrom.getBinaryDataArrayList().getBinaryDataArray().get(0).getBinaryDataAsNumberArray();
         Number[] intensity = chrom.getBinaryDataArrayList().getBinaryDataArray().get(1).getBinaryDataAsNumberArray();
         TIC = new double[2][time.length];
         for (int i = 0; i < time.length; i++) {
-
             TIC[ 0 ][ i ] = time[ i ].doubleValue();
             TIC[ 1 ][ i ] = intensity[ i ].doubleValue();
         }
-            
+        time = null;
+        intensity = null;
+        
         int no_threads = Runtime.getRuntime().availableProcessors();
         Thread[] threads = new Thread[no_threads+1];
         int object_count = unmarshaller.getObjectCountForXpath("/run/spectrumList/spectrum");
         spectra = new MassSpectrum[object_count];
+        
+//        // Try with one thread - maybe multithreading is causing the problem
+//        Thread thread = new Thread(new MZMLconverter(unmarshaller, 0, object_count, spectra, TIC[0], this.title));
+//        thread.start();
+//        try {
+//            thread.join();
+//        } catch (InterruptedException ex) {
+//                ex.printStackTrace();
+//            }
         for (int i = 0; i < threads.length; i++) {
             int start = i*(object_count/no_threads);
             int end = i*(object_count/no_threads) + (object_count/no_threads);
@@ -208,16 +219,19 @@ public class MSChrom {
                     List<BinaryDataArray> bda = bdal.getBinaryDataArray();
                     Number[] mz = bda.get(0).getBinaryDataAsNumberArray();
                     Number[] intensity = bda.get(1).getBinaryDataAsNumberArray();
+                    bda = null;
                     double[] mz_values = new double[mz.length];
                     double[] intensity_values = new double[intensity.length];
                     for (int j = 0; j < mz_values.length; j++) {
                         mz_values[j] = mz[j].doubleValue();
                         intensity_values[j] = intensity[j].doubleValue();
-                        //if (i==1) System.out.println(mz_values[j] + "\t"+intensity_values[j]);
                     }
+                    mz = null;
+                    intensity = null;
                     spectra[i] = new MassSpectrum(mz_values, intensity_values, 
                             msChromParentTitle,
                             "scan no:"+(spectrum.getIndex()+1)+" time:"+time[i]+"min");
+                
                 } catch (MzMLUnmarshallerException ex) {
                     ex.printStackTrace();
                 }
@@ -225,172 +239,11 @@ public class MSChrom {
             }
         }
     }
-    
-    public static float[] getFloatArrayFromCompressedBase64String(String input) throws Exception {
-
-    /**
-     * STEP 1: Decode bytes from base-64. These are compressed.
-     */
-    byte[] binArray = Base64.decode(input);
-
-    /**
-     * STEP 2: Make litte-endian
-     */
-
-    {
-        ByteBuffer bbuf = ByteBuffer.allocate(binArray.length);
-        bbuf.put(binArray);
-        binArray = bbuf.order(ByteOrder.LITTLE_ENDIAN).array();
-    }
-
-    /**
-     * STEP 3: Decompress from zlib. Note the data might not be compressed. Check associated cvParam elements.
-     */
-    byte[] decompressedData = null;
-    {
-        Inflater decompressor = new Inflater();
-        decompressor.setInput(binArray);
-
-        // Create an expandable byte array to hold the decompressed data
-        ByteArrayOutputStream bos = null;
-
-        try {
-
-            bos = new ByteArrayOutputStream(binArray.length);
-
-            // Decompress the data
-            byte[] buf = new byte[1024];
-            while (!decompressor.finished()) {
-                int count = decompressor.inflate(buf);
-                bos.write(buf, 0, count);
-            }
-
-        } finally {
-            try {
-                bos.close();
-            } catch (Exception nope) { /* This exception doesn't matter */ }
-        }
-
-        decompressedData = bos.toByteArray();
-    }
-
-    /**
-     * STEP 4: Read floats from IEEE 754 floating-point "single format" representations
-     */
-    final int totalFloats = decompressedData.length / 4;
-    float[] floatValues = new float[totalFloats];
-
-    // Iterate until parse each float
-    int floatIndex = 0;
-    for (int nextFloatPosition = 0; nextFloatPosition < decompressedData.length; nextFloatPosition += 4) {
-        // Read in the bytes
-        char c1 = (char) decompressedData[nextFloatPosition + 0];
-        char c2 = (char) decompressedData[nextFloatPosition + 1];
-        char c3 = (char) decompressedData[nextFloatPosition + 2];
-        char c4 = (char) decompressedData[nextFloatPosition + 3];
-
-        // Bitwise AND to make sure only first 2 bytes are included
-        int b1 = (int) (c1 & 0xFF);
-        int b2 = (int) (c2 & 0xFF);
-        int b3 = (int) (c3 & 0xFF);
-        int b4 = (int) (c4 & 0xFF);
-
-        // Build the four-byte floating-point "single  format" representation
-        int intBits = (b4 << 0) | (b3 << 8) | (b2 << 16) | (b1 << 24);
-
-        floatValues[floatIndex] = Float.intBitsToFloat(intBits);
-        
-        // Increment counter used to populate array
-        floatIndex++;
-    }
-
-    return floatValues;
-}
-    
-    
-    public static double[] getDoubleArrayFromCompressedBase64String(String input) throws Exception {
-
-    /**
-     * STEP 1: Decode bytes from base-64. These are compressed.
-     */
-    byte[] binArray = Base64.decode(input);
-
-    /**
-     * STEP 2: Make litte-endian
-     */
-    {
-        ByteBuffer bbuf = ByteBuffer.allocate(binArray.length);
-        bbuf.put(binArray);
-        binArray = bbuf.order(ByteOrder.LITTLE_ENDIAN).array();
-    }
-
-    /**
-     * STEP 3: Decompress from zlib. Note the data might not be compressed. Check associated cvParam elements.
-     */
-    byte[] decompressedData = null;
-    {
-        Inflater decompressor = new Inflater();
-        decompressor.setInput(binArray);
-
-        // Create an expandable byte array to hold the decompressed data
-        ByteArrayOutputStream bos = null;
-
-        try {
-
-            bos = new ByteArrayOutputStream(binArray.length);
-
-            // Decompress the data
-            byte[] buf = new byte[1024];
-            while (!decompressor.finished()) {
-                int count = decompressor.inflate(buf);
-                bos.write(buf, 0, count);
-            }
-
-        } finally {
-            try {
-                bos.close();
-            } catch (Exception nope) { /* This exception doesn't matter */ }
-        }
-
-        decompressedData = bos.toByteArray();
-    }
-
-    /**
-     * STEP 4: Read floats from IEEE 754 floating-point "single format" representations
-     */
-    final int totalFloats = decompressedData.length / 4;
-    double[] floatValues = new double[totalFloats];
-
-    // Iterate until parse each float
-    int floatIndex = 0;
-    for (int nextFloatPosition = 0; nextFloatPosition < decompressedData.length; nextFloatPosition += 4) {
-        // Read in the bytes
-        char c1 = (char) decompressedData[nextFloatPosition + 0];
-        char c2 = (char) decompressedData[nextFloatPosition + 1];
-        char c3 = (char) decompressedData[nextFloatPosition + 2];
-        char c4 = (char) decompressedData[nextFloatPosition + 3];
-
-        // Bitwise AND to make sure only first 2 bytes are included
-        int b1 = (int) (c1 & 0xFF);
-        int b2 = (int) (c2 & 0xFF);
-        int b3 = (int) (c3 & 0xFF);
-        int b4 = (int) (c4 & 0xFF);
-
-        // Build the four-byte floating-point "single  format" representation
-        int intBits = (b4 << 0) | (b3 << 8) | (b2 << 16) | (b1 << 24);
-        
-        floatValues[floatIndex] = Float.intBitsToFloat(intBits);
-        
-        // Increment counter used to populate array
-        floatIndex++;
-    }
-
-    return (double[])floatValues;
-}
-    
+ 
     public static void main (String[] args) {
+//        MzMLUnmarshaller unmarshaller = new MzMLUnmarshaller( new File("/Users/alexsevy/Documents/02-15LOX.mzML") );
         try {
-            MSChrom test = new MSChrom( new File("/Users/alexsevy/Documents/small.pwiz.1.1.mzML"), "MZML");
+            MSChrom test = new MSChrom( new File("/Users/alexsevy/Documents/02-15LOX.mzML"), "MZML");
         } catch ( MzMLUnmarshallerException exc ) {
                 exc.printStackTrace();
         }

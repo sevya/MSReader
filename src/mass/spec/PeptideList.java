@@ -8,8 +8,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class PeptideList implements Serializable {
     
@@ -17,9 +15,11 @@ public class PeptideList implements Serializable {
     public String[] labels = {"Sequence", "M/z", "Z", "Elution time"};
     static final long serialVersionUID = 646546;
     public File path;
+    private int sortKey;
     
     public PeptideList() {
         elements = new ArrayList();
+        sortKey = 1;
     }
     
     public int size() {
@@ -32,36 +32,52 @@ public class PeptideList implements Serializable {
     
     public void save () {
         if (path.exists()) path.delete();
-        ObjectOutputStream oos = null;
         try {
-            oos = new ObjectOutputStream(new FileOutputStream (path));
-            oos.writeObject(this);
-        } catch (Exception e) { 
-            Utils.showErrorMessage ("Unable to save");
-        } finally {
-            if ( oos == null ) try {
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream (path));
+            try {
+                oos.writeObject(this);
+            } finally { 
                 oos.close();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+            } 
+        } catch ( IOException e ) { 
+            Utils.logException( e, "Unable to save" );
+        } 
+    }
+    
+    public void addPeptide( Peptide p ) {
+        if ( p!= null ) { 
+            elements.add( p ); 
+            sort();
         }
     }
     
-    public void addPeptide(Peptide p) {
-        elements.add(p);
-    }
-    
-    public void removePeptide (int index) {
+    public void removePeptide ( int index ) {
+        if ( index >= elements.size() || index < 0 ) {
+            throw new IndexOutOfBoundsException();
+        }
         elements.remove(index);
+        sort();
     }
     
-    public Peptide elementAt (int index) {
+    public Peptide elementAt ( int index ) {
+        if ( index >= elements.size() || index < 0 ) {
+            throw new IndexOutOfBoundsException();
+        }
         return elements.get(index);
     }
     
-    public void sort (int sorttype) {
-        if (sorttype > 3 || sorttype < 0) throw new IndexOutOfBoundsException();
-        switch (sorttype){
+    public int getSortKey () { return sortKey; }
+    
+    public void setSortKey ( int key ) { 
+        if ( key > 3 || key < 0) throw new IndexOutOfBoundsException();
+        sortKey = key; 
+        sort();
+    }
+    
+    public File getPath () { return path; }
+    
+    public void sort () {
+        switch ( sortKey ){
             case 0:
                 Collections.sort(elements, new Comparator<Peptide>() {
                     @Override
@@ -107,9 +123,5 @@ public class PeptideList implements Serializable {
         for (int i = 0; i < elements.size(); i++) {
             System.out.println(elements.get(i).displaySequence+"\t"+elements.get(i).mz+"\t"+elements.get(i).charge+"\t"+elements.get(i).elutiontime);
         }
-    }
-    
-    public static void main (String[] args) {
-        
     }
 }

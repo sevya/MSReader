@@ -15,8 +15,9 @@ public class MassSpectrum implements Serializable{
     
     public MassSpectrum (double[][] values, String title) {
         msValues = new double[2][values[0].length];
-        System.arraycopy (values[0], 0, msValues[0], 0, values[0].length);
-        System.arraycopy (values[1], 0, msValues[1], 0, values[1].length);
+//        System.arraycopy (values[0], 0, msValues[0], 0, values[0].length);
+//        System.arraycopy (values[1], 0, msValues[1], 0, values[1].length);
+        msValues = values;
         msTitle = title;
     }
     
@@ -64,10 +65,16 @@ public class MassSpectrum implements Serializable{
     public double[][] getRange ( int startIndex, int endIndex ) {
         double[][] temp = new double [2][];
         temp[ 0 ] = Arrays.copyOfRange(this.msValues[0], startIndex, endIndex);
-        temp[ 0 ] = Arrays.copyOfRange(this.msValues[1], startIndex, endIndex);
+        temp[ 1 ] = Arrays.copyOfRange(this.msValues[1], startIndex, endIndex);
         return temp;
     }
     
+    public double[][] getWindow ( double peakValue, double windowSize ) {
+        int startIndex = peakIndex( peakValue - windowSize );
+        int endIndex = peakIndex( peakValue + windowSize );
+
+        return getRange( startIndex, endIndex);
+    }
     public double getYMax() {
         if (msValues == null) return getYMax (0, yvals.length);
         else return getYMax (0, msValues[1].length);

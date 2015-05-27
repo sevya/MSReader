@@ -1,0 +1,51 @@
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body>
+        <div>
+            <h3> HDX Form </h3>
+            After focusing on the peptide peaks for each time point, MS Reader generates
+            a form combining all of the time points into a single chart to visualize the 
+            change in molecular weight of a peptide over time; this is referred to as
+            a HDX form. This can be used to analyze the kinetics and deuterium intake of 
+            each peptide. When you view an HD exchange run, MS Reader shows the desired
+            peak from each one of the time points, along with displayed the time exchange 
+            chart. MS Reader calculates the deuterium intake in terms of change in molecular 
+            weight, divided by the number of residues in a peptide. This enables the user to 
+            compare deuterium exchange rates between long and short peptides. The combined 
+            peptide shift form can be saved with the .hdx extension.
+        </div>
+        
+        <div>
+            <h3> Fitting Equation to Data </h3>
+            The exchange window has a feature to add a regression line to the data.
+            This feature fits the equation y = A(1 - e<sup>-kt</sup>) to the user 
+            supplied data. In this equation, A represents the upper limit of deuterium intake,
+            while K represents the rate constant.
+        </div>
+        
+        <div>
+            <h3> Saving and Opening Time Exchange Runs </h3>
+            MS Reader allows you to save exchange data so that you can compare the
+            rate of deuterium intake for the same peptide over multiple runs. Time exchange
+            data is stored with the .hdx extension and can later be opened by MS Reader, 
+            either by comparing runs side by side or overlaying them onto the same chart. 
+        </div>
+        
+        <div>
+            <h3> Exporting .hdx files to Excel </h3>
+            MS Reader also allows you to convert time exchange data to a format that 
+            can be read by Excel. Select Export .hdx to Excel under the HD Exchange menu
+            to select a .hdx file that you would like to convert. If more than one
+            .hdx file is selected the data will be merged into a single
+            Excel document.
+        </div>
+    </body>
+</html>

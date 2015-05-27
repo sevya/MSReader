@@ -3,8 +3,6 @@ package mass.spec;
 import java.awt.event.*;
 import java.io.File;
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.*;
 
 public class OptionsMenu extends javax.swing.JDialog {
@@ -14,7 +12,7 @@ public class OptionsMenu extends javax.swing.JDialog {
     public OptionsMenu(java.awt.Frame parent, boolean modal) {
         super(parent, "Processing Options", modal);
         initComponents();
-        msr = (MSReader)parent;
+        msr = MSReader.getInstance();
         smoothType = msr.getIntProperty("smoothType");
         refresh();
     }
@@ -372,12 +370,12 @@ public class OptionsMenu extends javax.swing.JDialog {
         jButton1.setEnabled(jCheckBox1.isSelected());
         autosmooth.setSelected(msr.autoSmooth);
         jCheckBox1.setSelected(msr.autoBSB);
-        windowsize.setText(msr.properties.getProperty("windowSize"));
-        filterInput.setText(msr.properties.getProperty("filter"));
-        filterSG.setText(msr.properties.getProperty("SGfilter"));
-        degreeSG.setText(msr.properties.getProperty("SGdegree"));
-        pymolexe.setText(msr.properties.getProperty("pymolpath"));
-        pdbsave.setText(msr.properties.getProperty("pdbfetchpath"));
+        windowsize.setText(msr.getProperty("windowSize"));
+        filterInput.setText(msr.getProperty("filter"));
+        filterSG.setText(msr.getProperty("SGfilter"));
+        degreeSG.setText(msr.getProperty("SGdegree"));
+        pymolexe.setText(msr.getProperty("pymolpath"));
+        pdbsave.setText(msr.getProperty("pdbfetchpath"));
     }
     private void closeDialogActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_closeDialogActionPerformed
         dispose();
@@ -391,8 +389,8 @@ public class OptionsMenu extends javax.swing.JDialog {
                         "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            msr.properties.setProperty("filter", input);
-            msr.properties.setProperty("smoothType", ""+MSReader.SMOOTH_MOVING_AVG);
+            msr.setProperty("filter", input);
+            msr.setProperty("smoothType", ""+MSReader.SMOOTH_MOVING_AVG);
         } else if (jRadioButton2.isSelected()) {
             String input1 = filterSG.getText();
             String input2 = degreeSG.getText();
@@ -404,9 +402,9 @@ public class OptionsMenu extends javax.swing.JDialog {
                 Utils.showErrorMessage("Not a valid polynomial degree");
                 return;
             }
-            msr.properties.setProperty("SGfilter", input1);
-            msr.properties.setProperty("SGdegree", input2);
-            msr.properties.setProperty("smoothType", ""+MSReader.SMOOTH_SAV_GOL);
+            msr.setProperty("SGfilter", input1);
+            msr.setProperty("SGdegree", input2);
+            msr.setProperty("smoothType", ""+MSReader.SMOOTH_SAV_GOL);
         }
         
         if (jCheckBox1.isSelected()) {
@@ -419,7 +417,7 @@ public class OptionsMenu extends javax.swing.JDialog {
         msr.autoSmooth = autosmooth.isSelected();
         
         if (MSMath.isInt(windowsize.getText())) {
-            msr.properties.setProperty("windowSize", windowsize.getText());
+            msr.setProperty("windowSize", windowsize.getText());
         } else {
             Utils.showErrorMessage("Invalid input for window size");
             return;
@@ -427,7 +425,7 @@ public class OptionsMenu extends javax.swing.JDialog {
         
         File pymol = new File (pymolexe.getText());
         if (pymol.exists()) {
-            msr.properties.setProperty("pymolpath", pymol.toString());
+            msr.setProperty("pymolpath", pymol.toString());
             msr.saveProperties();
         } 
 
