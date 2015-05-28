@@ -3,7 +3,11 @@ package mass.spec;
 import java.awt.*;
 import java.io.*;
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -1088,11 +1092,11 @@ public class MSReader extends javax.swing.JFrame {
             Utils.showErrorMessage("Cannot overlay more than 15 HDX files at once");
             return;
         }
-        HDX_Form HDX = new HDX_Form(this);
-        HDX.altOverlay(hdr);
+        HDX_Form HDX = new HDX_Form( hdr );
+//        HDX.altOverlay(hdr);
         HDX.setVisible(true);
     }//GEN-LAST:event_openHDXActionPerformed
-       
+    
     private void exportSingleHDX (File f, File filepath) {
         final LoadingDialog ld = new LoadingDialog(this, false);
         ld.setLocationRelativeTo(this);
@@ -1138,9 +1142,9 @@ public class MSReader extends javax.swing.JFrame {
                     XSSFRow rowC = worksheet.createRow(rowno);
                     rowB.createCell(0).setCellValue("Time");
                     rowC.createCell(0).setCellValue("D/res");
-                    for (int j = 1; j < hdr.exchangeValues.length+1; j++) {
-                        rowB.createCell(j).setCellValue((Double)hdr.exchangeValues[j-1][0]);
-                        rowC.createCell(j).setCellValue((Double)hdr.exchangeValues[j-1][1]);
+                    for (int j = 1; j < hdr.getExchangeValues().length+1; j++) {
+                        rowB.createCell(j).setCellValue((Double)hdr.getExchangeValues()[j-1][0]);
+                        rowC.createCell(j).setCellValue((Double)hdr.getExchangeValues()[j-1][1]);
                     }
                     ois.close();
                     workbook.write(fos);
@@ -1222,9 +1226,9 @@ public class MSReader extends javax.swing.JFrame {
                 XSSFRow rowC = worksheet.createRow(rowno);
                 rowB.createCell(0).setCellValue("Time");
                 rowC.createCell(0).setCellValue("D/res");
-                for (int j = 1; j < hdr[i].exchangeValues.length+1; j++) {
-                    rowB.createCell(j).setCellValue((Double)hdr[i].exchangeValues[j-1][0]);
-                    rowC.createCell(j).setCellValue((Double)hdr[i].exchangeValues[j-1][1]);
+                for (int j = 1; j < hdr[i].getExchangeValues().length+1; j++) {
+                    rowB.createCell(j).setCellValue((Double)hdr[i].getExchangeValues()[j-1][0]);
+                    rowC.createCell(j).setCellValue((Double)hdr[i].getExchangeValues()[j-1][1]);
                 }
                 rowno+=2;
             }
@@ -1272,8 +1276,11 @@ public class MSReader extends javax.swing.JFrame {
             }
             else return; 
             final File path = new File(savepath.toString() + ".xlsx");
-            if (files.length > 1) exportMultipleHDX(files, path);
-            else exportSingleHDX(files[0], path);
+            // TODO: test this - I don't think I should need two different 
+            // methods here but I'm not sure
+            exportMultipleHDX( files, path );
+//            if (files.length > 1) exportMultipleHDX(files, path);
+//            else exportSingleHDX(files[0], path);
         }
     }//GEN-LAST:event_exportHDXToExcelActionPerformed
 
@@ -1411,7 +1418,7 @@ public class MSReader extends javax.swing.JFrame {
         // Saves current MSC to place back on the screen after running auto hdx
         // May be unnecessary and take up a lot of memory
 //        if (currentMSC != null) tempMSC = currentMSC.copy();
-        worker = new SwingWorker<Void, Void>() {
+        worker = new SwingWorker<Void, String>() {
             @Override
             protected Void doInBackground() throws MzMLUnmarshallerException {
                 int elutionIndex;
@@ -1419,6 +1426,7 @@ public class MSReader extends javax.swing.JFrame {
                 String extension = "";
                 for ( File f : files ) {
                     System.out.println("Processing "+f.toString());
+                    publish( "Processing "+f.getName() );
                     if ( f.toString().toLowerCase().endsWith(".cdf") ) extension = "CDF";
                     else if ( f.toString().toLowerCase().endsWith(".mzml" ) ) extension = "MZML";
                     try {
@@ -1454,6 +1462,12 @@ public class MSReader extends javax.swing.JFrame {
                 }
               return null;  
             }
+            
+            @Override
+            protected void process( List<String> message ) {
+                ld.setText( message.get( 0 ) );
+            }
+            
             @Override
             protected void done() {
                 try { 
@@ -1482,7 +1496,8 @@ public class MSReader extends javax.swing.JFrame {
                 refreshChromatogram();
                 ld.dispose();
                 resize();
-        }};
+        }
+        };
         ld.setLocationRelativeTo(this);
         ld.setVisible(true);
         worker.execute();

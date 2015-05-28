@@ -351,12 +351,36 @@ public class Utils {
         return obj_arr;
     }
     
+    public static Double[][] compare( HDRun sample1, HDRun sample2 ) {
+        Object[][] values1 = sample1.getExchangeValues();
+        Object[][] values2 = sample2.getExchangeValues();
+        // Check that both runs have the same number of time points
+        assert values1[ 0 ].length == values2[ 0 ].length;
+        
+        Double[][] difference = new Double[ 2 ][ values1[ 0 ].length ];
+        for ( int i = 0; i < values1[ 0 ].length; ++i ) {
+            // Check that both runs have the same values for each time point
+            if ( !values1[ 0 ][ i ].equals( values2[ 0 ][ i ] ) ) {
+                throw new IndexOutOfBoundsException();
+            }
+            difference[ 0 ][ i ] = (Double)values1[ 0 ][ i ];
+            difference[ 1 ][ i ] = (Double)values1[ 1 ][ i ] - (Double)values2[ 1 ][ i ];
+        }
+        return difference;
+    }
+    
     public static void main (String[] args)
     {
-        Double x = 5.0;
-        Double y = 8.0;
-        System.out.println( x.compareTo( y ) );
+        double[] xvals = {0, 5, 10, 15, 20};
+        double[] yvals_unbound = {0, 0.3, 0.4, 0.45, 0.46};
+        double[] yvals_bound = {0, 0.15, 0.2, 0.21, 0.22};
+        HDRun unbound = new HDRun( new double [][] {xvals, yvals_unbound } );
+        HDRun bound = new HDRun( new double [][] {xvals, yvals_bound } );
         
+        Double[][] diff = compare( unbound, bound );
         
+        for ( int i = 0; i < diff[ 0 ].length; ++i ) {
+            System.out.println( diff[ 0 ][ i ]+"\t"+diff[ 1 ][ i ] );
+        }
     }
 }

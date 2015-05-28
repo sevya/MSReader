@@ -24,7 +24,7 @@ public class ProtectionMap {
             List<String> peptidelist = new ArrayList();
             List<Double> deuterium = new ArrayList();
             for (int i = 0; i < forms[0].length; i++) {
-                peptidelist.add(Utils.trimPeptide(forms[0][i].peptide.sequence));
+                peptidelist.add(Utils.trimPeptide(forms[0][i].getPeptide().sequence));
                 deuterium.add(forms[0][i].A);
             }
             
@@ -44,10 +44,10 @@ public class ProtectionMap {
             List<Double> deuteriumfree = new ArrayList();
             List<Double> deuteriumbound = new ArrayList();
             for (int i = 0; i < forms[0].length; i++) {
-                peptidelistfree.add(Utils.trimPeptide(forms[0][i].peptide.sequence));
+                peptidelistfree.add(Utils.trimPeptide(forms[0][i].getPeptide().sequence));
                 deuteriumfree.add(forms[0][i].A);
             } for (int i = 0; i < forms[1].length; i++) {
-                peptidelistbound.add(Utils.trimPeptide(forms[1][i].peptide.sequence));
+                peptidelistbound.add(Utils.trimPeptide(forms[1][i].getPeptide().sequence));
                 deuteriumbound.add(forms[1][i].A);
             }
             

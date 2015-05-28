@@ -72,7 +72,8 @@ public class Peak {
             MSReader.getHDExchangeInstance().updateSummary();
 
         } catch (NoPeakDetectedException e) {
-            window_.setError(e.getMessage());
+            e.printStackTrace();
+//            window_.setError(e.getMessage());
         }
     }
     
@@ -89,12 +90,12 @@ public class Peak {
         max /= MSMath.getMax(tope[1]);
         for (int i = 0; i < tope[1].length; i++) tope[1][i] = tope[1][i] * max;
         
-        if (timePoint_ != 0) {
-            double shift = getShift( dataRange_, new double[][] {tope[0].clone(), tope[1].clone()});
-            for (int i = 0; i < tope[0].length; i++) tope[0][i] += shift;
-        }
+//        if (timePoint_ != 0) {
+//            double shift = getShift( dataRange_, new double[][] {tope[0].clone(), tope[1].clone()});
+//            for (int i = 0; i < tope[0].length; i++) tope[0][i] += shift;
+//        }
         double score = MSMath.getScore( dataRange_, tope );
-        window_.setTitle(score+"");
+//        window_.setTitle(score+"");
         
         if (score < .5) throw new NoPeakDetectedException("No peak detected - does not match input peptide");
         int start = Utils.binarySearch ( dataRange_[0], tope[0][0] );

@@ -17,7 +17,7 @@ public class HDX_Form extends javax.swing.JFrame {
    String title;
    private Peptide peptide_;
    double a = 0, k = 0;
-   MSReader parent;
+//   MSReader parent;
    DecimalFormat akformat = new DecimalFormat("###.###");
      
    public HDX_Form () {
@@ -29,7 +29,21 @@ public class HDX_Form extends javax.swing.JFrame {
        residues.setText( Integer.toString( 
                MSReader.getHDExchangeInstance()
                        .getPeptide().sequence.length() ) );
+       peptide_ = MSReader.getHDExchangeInstance().getPeptide();
        updateAll();
+   }
+   
+   // This constructor is meant for when an HDX Form is initialized not from
+   // open analysis but from a saved file
+   public HDX_Form ( HDRun[] hdruns ) {
+       super( "HD Exchange Analysis" );
+       initComponents();
+       // TODO: there has to be a better way than just picking up on the first instance
+       peptide_ = hdruns[ 0 ].getPeptide();
+       zstate.setText( Integer.toString( peptide_.charge ) );
+       residues.setText( Integer.toString( peptide_.sequence.length() ) );
+       plotHDRuns( hdruns );
+//       updateAll();
    }
    
     private void updateTable () {
@@ -103,24 +117,13 @@ public class HDX_Form extends javax.swing.JFrame {
     
     public Peptide getPeptide() { return peptide_; }
 
-    public void altOverlay (HDRun[] hdr) {
+    public void plotHDRuns ( HDRun[] hdruns ) {
         expandGraph();
         XYSeriesCollection dataset = new XYSeriesCollection();
-        XYSeries series;
-        for (int i = 0; i < hdr.length; i++) {
-            series = new XYSeries(gettitle(hdr[i].title, dataset));
-            for (int j = 0; j < hdr[i].exchangeValues.length; j++) {
-                series.add((Double)hdr[i].exchangeValues[j][0], (Double)hdr[i].exchangeValues[j][1]);
-            } dataset.addSeries(series);
-            series = new XYSeries(gettitle("A: "+akformat.format(hdr[i].A)+ " K: "+akformat.format(hdr[i].K), dataset));
-            double x = (Double)hdr[i].exchangeValues[hdr[i].exchangeValues.length - 1][0];
-            int y = (int)x;
-            for (int j = 0; j < y; j++) {
-                series.add(j, pointAt(hdr[i].A, hdr[i].K, j));
-            } 
-            dataset.addSeries(series);
+        for ( HDRun hdrun : hdruns ) {
+            dataset.addSeries( hdrun.toXYSeries() );
         }
-        String charttitle = (hdr.length == 1) ? hdr[0].title : "";
+        String charttitle = (hdruns.length == 1) ? hdruns[0].title : "";
         JFreeChart chart = ChartFactory.createXYLineChart(
                 charttitle,
                 "time (min)",
@@ -174,14 +177,7 @@ public class HDX_Form extends javax.swing.JFrame {
         addRegression.setVisible(false);
     }
 
-    private static String gettitle (String title, XYSeriesCollection coll) {
-        int index = coll.getSeriesIndex(title);
-        while (index >= 0) {
-            title += " ";
-            index = coll.getSeriesIndex(title);
-        } return title;
-    }
-    
+    // Solves for Y in the equation y = A(1-e^-kx), given A, K, and x
     private Double pointAt (double A, double K, double x) {
         return A*(1-Math.exp(-K*x));
     }
@@ -216,7 +212,7 @@ public class HDX_Form extends javax.swing.JFrame {
     }
     
     public void setParameters (HDRun hdr) {
-        DefaultTableModel d = new DefaultTableModel(hdr.exchangeValues, new String[] {"time(min)", "D/res"});
+        DefaultTableModel d = new DefaultTableModel(hdr.getExchangeValues(), new String[] {"time(min)", "D/res"});
         jTable1.setModel(d);
         jScrollPane1.setViewportView(jTable1);
         jScrollPane1.revalidate();        
@@ -224,14 +220,14 @@ public class HDX_Form extends javax.swing.JFrame {
         addRegression.setVisible(false);
         XYSeries series;
         XYSeriesCollection dataset = new XYSeriesCollection();
-        peptide_ = hdr.peptide;
+        peptide_ = hdr.getPeptide();
         a = hdr.A;
         k = hdr.K;
         zstate.setText(""+peptide_.charge);
         residues.setText(""+peptide_.sequence.length());
         series = new XYSeries(hdr.title);
-        for (int i = 0; i < hdr.exchangeValues.length; i++) {
-            series.add((Double)hdr.exchangeValues[i][0], (Double)hdr.exchangeValues[i][1]);
+        for (int i = 0; i < hdr.getExchangeValues().length; i++) {
+            series.add((Double)hdr.getExchangeValues()[i][0], (Double)hdr.getExchangeValues()[i][1]);
         } dataset.addSeries(series);
         series = new XYSeries ("A: "+akformat.format(hdr.A)+ " K: "+akformat.format(hdr.K));
         for (int i = 0; i < MSMath.getTableXMax(d); i++) {
@@ -239,7 +235,7 @@ public class HDX_Form extends javax.swing.JFrame {
         } dataset.addSeries(series);        
         
         JFreeChart chart = ChartFactory.createXYLineChart(
-                hdr.peptide.displaySequence, 
+                hdr.getPeptide().displaySequence, 
                 "time(min)", 
                 "D/residue", 
                 dataset, 
@@ -446,7 +442,7 @@ public class HDX_Form extends javax.swing.JFrame {
     private void SaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveActionPerformed
         JFileChooser fr = new JFileChooser();
         fr.setVisible(true);
-        fr.setCurrentDirectory( parent.msreaderFiles );
+        fr.setCurrentDirectory( MSReader.getInstance().msreaderFiles );
         if ( peptide_ != null ) {
             fr.setSelectedFile( new File( peptide_.displaySequence ) ); 
         }
@@ -456,7 +452,7 @@ public class HDX_Form extends javax.swing.JFrame {
         if (returnval != JFileChooser.APPROVE_OPTION) return;
         path = fr.getSelectedFile().toString();
         
-        HDRun h = new HDRun(this);
+        HDRun h = new HDRun();
         int opt = -1;
         
         if (path.toUpperCase().contains(".HDX")) {
@@ -477,6 +473,7 @@ public class HDX_Form extends javax.swing.JFrame {
         } catch (Exception e) {
             Utils.showErrorMessage("Error: could not write file");
         }
+        Utils.showMessage("File saved!");
     }//GEN-LAST:event_SaveActionPerformed
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
@@ -484,16 +481,20 @@ public class HDX_Form extends javax.swing.JFrame {
     }//GEN-LAST:event_updateActionPerformed
 
     private void removeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeActionPerformed
-        RemoveTimePoint tp = new RemoveTimePoint(this, true);
-        tp.setLocationRelativeTo(this);
-        tp.setVisible(true);
-        updateAll();
+        // TODO: fix this or take it out
+        Utils.showErrorMessage( "Sorry, this function is broken right now");
+//        RemoveTimePoint tp = new RemoveTimePoint(this, true);
+//        tp.setLocationRelativeTo(this);
+//        tp.setVisible(true);
+//        updateAll();
     }//GEN-LAST:event_removeActionPerformed
 
     private void addRegressionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addRegressionActionPerformed
-        if (!parent.exchange.hasZeroPt()) Utils.showErrorMessage("Error: can't add regression"
+        if (!MSReader.getHDExchangeInstance().hasZeroTimePoint() ) {
+            Utils.showErrorMessage("Error: can't add regression"
                 + " line without a non deuterated time point");
-        double[][] data = parent.exchange.getArray();
+        }
+        double[][] data = MSReader.getHDExchangeInstance().getSummaryData();
         double[] values = new Optimizer(data[0], data[1]) {
             @Override
             double function(double A, double K, double xval) {
@@ -553,103 +554,104 @@ public class HDX_Form extends javax.swing.JFrame {
     private javax.swing.JTextField zstate;
     // End of variables declaration//GEN-END:variables
 
-    class RemoveTimePoint extends javax.swing.JDialog {
-
-        DefaultListModel listModel;
-        HDX_Form hdxf;
-
-        public RemoveTimePoint(java.awt.Frame parent, boolean modal) {
-            super(parent, modal);
-            initComponents();
-            hdxf = (HDX_Form)parent;
-            listModel = new DefaultListModel();
-            for (int i = 0; i < hdxf.parent.exchange.key.size(); i++) {
-                listModel.addElement(hdxf.parent.exchange.key.get(i));          
-            }
-            jList1.setModel (listModel);
-        }
-
-
-        @SuppressWarnings("unchecked")
-        // <editor-fold defaultstate="collapsed" desc="Generated Code">
-        private void initComponents() {
-
-            jScrollPane1 = new javax.swing.JScrollPane();
-            jList1 = new javax.swing.JList();
-            jButton1 = new javax.swing.JButton();
-            jButton2 = new javax.swing.JButton();
-
-            setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-
-            jList1.setModel(new javax.swing.AbstractListModel() {
-                String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
-                public int getSize() { return strings.length; }
-                public Object getElementAt(int i) { return strings[i]; }
-            });
-            jScrollPane1.setViewportView(jList1);
-
-            jButton1.setText("Remove");
-            jButton1.addActionListener(new java.awt.event.ActionListener() {
-                public void actionPerformed(java.awt.event.ActionEvent evt) {
-                    jButton1ActionPerformed(evt);
-                }
-            });
-
-            jButton2.setText("Cancel");
-            jButton2.addActionListener(new java.awt.event.ActionListener() {
-                public void actionPerformed(java.awt.event.ActionEvent evt) {
-                    jButton2ActionPerformed(evt);
-                }
-            });
-
-            javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-            getContentPane().setLayout(layout);
-            layout.setHorizontalGroup(
-                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(layout.createSequentialGroup()
-                            .addGap(31, 31, 31)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 378, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGroup(layout.createSequentialGroup()
-                            .addGap(44, 44, 44)
-                            .addComponent(jButton1)
-                            .addGap(18, 18, 18)
-                            .addComponent(jButton2)))
-                    .addContainerGap(29, Short.MAX_VALUE))
-            );
-            layout.setVerticalGroup(
-                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                    .addContainerGap()
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(18, 18, 18)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(jButton1)
-                        .addComponent(jButton2))
-                    .addContainerGap(29, Short.MAX_VALUE))
-            );
-
-            pack();
-        }// </editor-fold>
-
-        private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {
-            dispose();
-        }
-
-        private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {
-            int index = jList1.getSelectedIndex();
-            if (index < 0) return;
-            String str = (String)jList1.getSelectedValue();
-            hdxf.parent.exchange.removeTimePoint(str);
-            dispose();
-        }
-
-        private javax.swing.JButton jButton1;
-        private javax.swing.JButton jButton2;
-        private javax.swing.JList jList1;
-        private javax.swing.JScrollPane jScrollPane1;
-    }
+    // TODO: fix this class or remove it
+//    class RemoveTimePoint extends javax.swing.JDialog {
+//
+//        DefaultListModel listModel;
+//        HDX_Form hdxf;
+//
+//        public RemoveTimePoint(java.awt.Frame parent, boolean modal) {
+//            super(parent, modal);
+//            initComponents();
+//            hdxf = (HDX_Form)parent;
+//            listModel = new DefaultListModel();
+//            for (int i = 0; i < hdxf.parent.exchange.key.size(); i++) {
+//                listModel.addElement(hdxf.parent.exchange.key.get(i));          
+//            }
+//            jList1.setModel (listModel);
+//        }
+//
+//
+//        @SuppressWarnings("unchecked")
+//        // <editor-fold defaultstate="collapsed" desc="Generated Code">
+//        private void initComponents() {
+//
+//            jScrollPane1 = new javax.swing.JScrollPane();
+//            jList1 = new javax.swing.JList();
+//            jButton1 = new javax.swing.JButton();
+//            jButton2 = new javax.swing.JButton();
+//
+//            setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+//
+//            jList1.setModel(new javax.swing.AbstractListModel() {
+//                String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+//                public int getSize() { return strings.length; }
+//                public Object getElementAt(int i) { return strings[i]; }
+//            });
+//            jScrollPane1.setViewportView(jList1);
+//
+//            jButton1.setText("Remove");
+//            jButton1.addActionListener(new java.awt.event.ActionListener() {
+//                public void actionPerformed(java.awt.event.ActionEvent evt) {
+//                    jButton1ActionPerformed(evt);
+//                }
+//            });
+//
+//            jButton2.setText("Cancel");
+//            jButton2.addActionListener(new java.awt.event.ActionListener() {
+//                public void actionPerformed(java.awt.event.ActionEvent evt) {
+//                    jButton2ActionPerformed(evt);
+//                }
+//            });
+//
+//            javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+//            getContentPane().setLayout(layout);
+//            layout.setHorizontalGroup(
+//                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+//                .addGroup(layout.createSequentialGroup()
+//                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+//                        .addGroup(layout.createSequentialGroup()
+//                            .addGap(31, 31, 31)
+//                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 378, javax.swing.GroupLayout.PREFERRED_SIZE))
+//                        .addGroup(layout.createSequentialGroup()
+//                            .addGap(44, 44, 44)
+//                            .addComponent(jButton1)
+//                            .addGap(18, 18, 18)
+//                            .addComponent(jButton2)))
+//                    .addContainerGap(29, Short.MAX_VALUE))
+//            );
+//            layout.setVerticalGroup(
+//                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+//                .addGroup(layout.createSequentialGroup()
+//                    .addContainerGap()
+//                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
+//                    .addGap(18, 18, 18)
+//                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+//                        .addComponent(jButton1)
+//                        .addComponent(jButton2))
+//                    .addContainerGap(29, Short.MAX_VALUE))
+//            );
+//
+//            pack();
+//        }// </editor-fold>
+//
+//        private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {
+//            dispose();
+//        }
+//
+//        private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {
+//            int index = jList1.getSelectedIndex();
+//            if (index < 0) return;
+//            String str = (String)jList1.getSelectedValue();
+//            hdxf.parent.exchange.removeTimePoint(str);
+//            dispose();
+//        }
+//
+//        private javax.swing.JButton jButton1;
+//        private javax.swing.JButton jButton2;
+//        private javax.swing.JList jList1;
+//        private javax.swing.JScrollPane jScrollPane1;
+//    }
     
     class ColorChooser extends JDialog {
         

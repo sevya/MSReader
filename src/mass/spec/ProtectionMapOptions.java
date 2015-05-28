@@ -515,7 +515,7 @@ public class ProtectionMapOptions extends javax.swing.JDialog {
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
         pdbentry.setText("");
         PDBQuery query = new PDBQuery(null, true);
-        query.setSavePath (new File (msr.properties.getProperty("pdbfetchpath")));
+        query.setSavePath (new File (msr.getProperty("pdbfetchpath")));
         query.setLocationRelativeTo(this);
         query.setVisible(true);
         File pdbpath = query.getPath();
