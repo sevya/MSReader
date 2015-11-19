@@ -119,12 +119,14 @@ public class Utils {
         
     public static String trimPeptide (String str) {
         str = str.trim();
-        int spot = str.indexOf(".");
-        if (spot != -1) str = str.substring(spot+1, str.length());
-        spot = str.indexOf(".");
-        if (spot != -1) str = str.substring(0, spot);
+        // Temporarily commented out since it interferes with the way I want to
+        // read in modifications - TODO find a more sustainable way to do this
+//        int spot = str.indexOf(".");
+//        if (spot != -1 && spot != 1 && spot != str.length()-2 ) str = str.substring(spot+1, str.length());
+//        spot = str.indexOf(".");
+//        if (spot != -1 && spot != 1 && spot != str.length()-2 ) str = str.substring(0, spot);
         
-        spot = str.indexOf("-");
+        int spot = str.indexOf("-");
         if (spot != -1) str = str.substring(spot+1, str.length());
         spot = str.indexOf("-");
         if (spot != -1) str = str.substring(0, spot);

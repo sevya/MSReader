@@ -25,6 +25,7 @@ public class Peptide implements Serializable {
     List<Double> mass_vector;
     List<Double> prob_vector;
     static int OPTIMUM_THREAD_NO = 5;
+    double modification;
     
     public Peptide (String str, int z, double elution) {
         if (str.length() < 1) throw new NullPointerException();
@@ -50,12 +51,24 @@ public class Peptide implements Serializable {
         double mass = element_composition[0]*12+element_composition[1]*1.007825+
                 element_composition[2]*14.003074+element_composition[3]*15.994915
                 +element_composition[4]*31.972072;
-        return mass;
+        return mass + modification;
     }
 
     private void getElementComposition() {
         element_composition = getElement(sequence.substring(0, 1));
         for (int i = 1; i < sequence.length(); i++) {
+            // if current amino acid is a parenthesis, scan for end of the 
+            // parenthesis and add the value within as a modification
+            if ( sequence.substring(i, i+1).equals("(") ) {
+                String mod_str = "";
+                i++;
+                while ( !sequence.substring(i, i+1).equals(")") ) {
+                    mod_str += sequence.substring(i, i+1);
+                    i++;
+                }
+                modification += Double.parseDouble( mod_str );
+                i++; 
+            }
             add (element_composition, getElement(sequence.substring(i, i+1)));
         } 
     }
@@ -187,8 +200,10 @@ public class Peptide implements Serializable {
     
     
     public static void main (String[] args) {
-       Peptide pept = new Peptide("L.GVSSACPYQGKSSF.F", 2, 8.32);
-        System.out.println(pept.maxDeuteration());
+       Peptide pept = new Peptide("GVSSACPYQGKSSF", 1, 8.32);
+       System.out.println(pept.mz);
+       pept = new Peptide("GVSSACP(+0.997)YQGKSSF", 1, 8.32);
+       System.out.println(pept.mz);
     }
 }
 

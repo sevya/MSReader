@@ -7,7 +7,6 @@ size then having to save the entire HDExchange object itself
 */
 
 import java.io.Serializable;
-import java.security.InvalidParameterException;
 import java.text.DecimalFormat;
 import org.jfree.data.xy.XYSeries;
 
