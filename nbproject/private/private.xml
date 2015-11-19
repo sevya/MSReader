@@ -3,17 +3,11 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/HDX_Form.java</file>
-            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/SequenceEngine.java</file>
+            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/ProtectionMapOptions.java</file>
             <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/HDRun.java</file>
-            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/Exchange_Popup.java</file>
+            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/ProtectionMap.java</file>
             <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/MSReader.java</file>
-            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/FormatChange.java</file>
             <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/HDExchangeTimePoint.java</file>
-            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/HDExchange.java</file>
-            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/MassSpectrum.java</file>
-            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/Utils.java</file>
-            <file>file:/Users/alexsevy/NetBeansProjects/MSReader/src/mass/spec/MSMath.java</file>
         </group>
     </open-files>
 </project-private>

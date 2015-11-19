@@ -17,6 +17,7 @@ public class HDX_Form extends javax.swing.JFrame {
    String title;
    private Peptide peptide_;
    double a = 0, k = 0;
+   HDExchange parent;
 //   MSReader parent;
    DecimalFormat akformat = new DecimalFormat("###.###");
      
@@ -30,6 +31,18 @@ public class HDX_Form extends javax.swing.JFrame {
                MSReader.getHDExchangeInstance()
                        .getPeptide().sequence.length() ) );
        peptide_ = MSReader.getHDExchangeInstance().getPeptide();
+       updateAll();
+   }
+   
+   // Alternate constructor where HDX Form doesn't get any information from 
+   // MSReader hdexchange singleton instance
+   public HDX_Form ( HDExchange par ) {
+       super ("HD Exchange Analysis");
+       parent = par;
+       initComponents();
+       peptide_ = parent.getPeptide();
+       zstate.setText( Integer.toString( peptide_.charge ) );
+       residues.setText( Integer.toString( peptide_.sequence.length() ) );
        updateAll();
    }
    
@@ -47,14 +60,15 @@ public class HDX_Form extends javax.swing.JFrame {
    }
    
     private void updateTable () {
-        DefaultTableModel dtm = MSReader.getHDExchangeInstance().getSummaryDataAsTable();
+        // TODO fix this to not take in a singleton
+        DefaultTableModel dtm = parent.getSummaryDataAsTable();
         jTable1.setModel(dtm);
         jTable1.revalidate();
     }
     
     private void updatePlot () {
 
-        XYSeries ser = MSReader.getHDExchangeInstance().getSummaryDataAsXYSeries();
+        XYSeries ser = parent.getSummaryDataAsXYSeries();
         XYSeriesCollection coll = new XYSeriesCollection();
         coll.addSeries(ser);
         
@@ -65,7 +79,7 @@ public class HDX_Form extends javax.swing.JFrame {
         XYPlot plot = new XYPlot (coll, xAxis, yAxis, (XYItemRenderer)renderer);
         plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
         JFreeChart chart = new JFreeChart(
-                MSReader.getHDExchangeInstance().getPeptide().displaySequence,
+                peptide_.displaySequence,
                 JFreeChart.DEFAULT_TITLE_FONT, 
                 plot, 
                 false
@@ -452,7 +466,9 @@ public class HDX_Form extends javax.swing.JFrame {
         if (returnval != JFileChooser.APPROVE_OPTION) return;
         path = fr.getSelectedFile().toString();
         
-        HDRun h = new HDRun();
+        // Build HDRun from singleton instance of HDExchange object
+        // need to move to allowing multiple HDExchange objects to coexist
+        HDRun h = new HDRun( parent );
         int opt = -1;
         
         if (path.toUpperCase().contains(".HDX")) {
@@ -490,11 +506,11 @@ public class HDX_Form extends javax.swing.JFrame {
     }//GEN-LAST:event_removeActionPerformed
 
     private void addRegressionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addRegressionActionPerformed
-        if (!MSReader.getHDExchangeInstance().hasZeroTimePoint() ) {
+        if (!parent.hasZeroTimePoint() ) {
             Utils.showErrorMessage("Error: can't add regression"
                 + " line without a non deuterated time point");
         }
-        double[][] data = MSReader.getHDExchangeInstance().getSummaryData();
+        double[][] data = parent.getSummaryData();
         double[] values = new Optimizer(data[0], data[1]) {
             @Override
             double function(double A, double K, double xval) {

@@ -3,6 +3,10 @@ package mass.spec;
 import java.io.*;
 import java.security.InvalidParameterException;
 import java.util.*;
+import org.jfree.chart.ChartFrame;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 import org.uncommons.maths.random.BinomialGenerator;
 import org.uncommons.maths.random.MersenneTwisterRNG;
 
@@ -56,6 +60,14 @@ public class Peptide implements Serializable {
         } 
     }
     
+    public double maxDeuteration() {
+        int prolines = 0;
+        for (int i = 0; i < sequence.length(); ++i) {
+            prolines += ( sequence.toUpperCase().charAt(i) == 'P' ? 1 : 0 );
+        }
+        return (sequence.length() - prolines - 1)/(double)charge;
+    }
+    
     private int[] getElement (String aa) {
         aa = aa.toUpperCase();
         if ( "A".equals(aa) ) return new int[] {3, 7, 1, 2, 0};
@@ -78,7 +90,10 @@ public class Peptide implements Serializable {
         else if ( "R".equals(aa) ) return new int[] {6, 14, 4, 2, 0};
         else if ( "D".equals(aa) ) return new int[] {4, 7, 1, 4, 0};
         else if ( "E".equals(aa) ) return new int[] {5, 9, 1, 4, 0};
-        else throw new InvalidParameterException();
+        else {
+            System.out.println(aa);
+            throw new InvalidParameterException();
+        }
     }
     
     private void add (int[] one, int[] two) {
@@ -172,13 +187,8 @@ public class Peptide implements Serializable {
     
     
     public static void main (String[] args) {
-       Peptide pept = new Peptide("FATWSPSKARLHLQGRSNAWRPQVNNPKEWLQCV", 2, 8.32);
-       for (int i = 0; i < 1000; i++) {
-           pept.getNonThreadedDistribution(100);
-       }
-       Timer t = new Timer();
-       pept.getThreadedDistribution(1000000);
-       t.printTime();
+       Peptide pept = new Peptide("L.GVSSACPYQGKSSF.F", 2, 8.32);
+        System.out.println(pept.maxDeuteration());
     }
 }
 

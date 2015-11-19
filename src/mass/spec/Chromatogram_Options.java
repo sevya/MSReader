@@ -194,8 +194,8 @@ public class Chromatogram_Options extends javax.swing.JDialog {
         try {
             values[1] = Double.parseDouble(jTextField2.getText());
         } catch (Exception e) {
-            values[0] -= 2;
-            values[1] = values[0] + 4;
+            values[0] -= 1;
+            values[1] = values[0] + 1;
             return values;
         }
         return values;

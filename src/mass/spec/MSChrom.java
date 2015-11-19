@@ -55,18 +55,22 @@ public class MSChrom {
     }
     
     public MSChrom (File f, String type) throws MzMLUnmarshallerException {
+        path = f.getAbsolutePath();
+        String s = f.getName();
+        String[] split = s.split("\\.");
+        this.title = split[0];
         if (type.equals("MZML")) {
-            path = f.getAbsolutePath();
+//            path = f.getAbsolutePath();
             //String s = f.getParent();
             //String[] split = s.toString().split(Pattern.quote(File.separator));
-            this.title = f.getName();
+//            this.title = f.getName();
             SPECTRA_UNIFORM = false;
             convertMZML(f.toString());
         } else if (type.equals("CDF")) {
-            path = f.getAbsolutePath();
-            String s = f.getParent();
-            String[] split = s.split(Pattern.quote(File.separator));
-            this.title = split[split.length-1];
+//            path = f.getAbsolutePath();
+//            String s = f.getParent();
+//            String[] split = s.split(Pattern.quote(File.separator));
+//            this.title = split[split.length-1];
             convertCDF(f.toString());
         } else {
             //do nothing
@@ -230,8 +234,10 @@ public class MSChrom {
                     intensity = null;
                     spectra[i] = new MassSpectrum(mz_values, intensity_values, 
                             msChromParentTitle,
-                            "scan no:"+(spectrum.getIndex()+1)+" time:"+time[i]+"min");
-                
+                            "scan no:"+(spectrum.getIndex()+1)+" time:"+
+                                    String.format("%.2f",time[i])+"min");
+                    spectra[i].setRetentionTime(time[i]);
+                    
                 } catch (MzMLUnmarshallerException ex) {
                     ex.printStackTrace();
                 }
@@ -243,7 +249,8 @@ public class MSChrom {
     public static void main (String[] args) {
 //        MzMLUnmarshaller unmarshaller = new MzMLUnmarshaller( new File("/Users/alexsevy/Documents/02-15LOX.mzML") );
         try {
-            MSChrom test = new MSChrom( new File("/Users/alexsevy/Documents/02-15LOX.mzML"), "MZML");
+            MSChrom test = new MSChrom( new File("/Users/alexsevy/Documents/MSReader files/H5VN apo/20151014_H5VN_D2O8M.mzML"), "MZML");
+            for ( MassSpectrum ms : test.spectra ) { System.out.println(ms.getRetentionTime()); }
         } catch ( MzMLUnmarshallerException exc ) {
                 exc.printStackTrace();
         }

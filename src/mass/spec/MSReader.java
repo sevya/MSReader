@@ -27,10 +27,7 @@ public class MSReader extends javax.swing.JFrame {
     File documents=null, msreaderFiles=null, bin=null, temp=null;
     public ArrayList<MassSpectrum> loadedMS = new ArrayList();
     public MSChrom currentMSC = null;
-//    private MSChrom tempMSC = null;
     public boolean smoothed = false;
-//    public ArrayList<String> exchangeRunTitles = new ArrayList();
-//    public ExchangePts exchange;
     public static final int CHROM_TYPE_EIC = 2;
     public static final int CHROM_TYPE_BPC = 1;
     public static final int CHROM_TYPE_TIC = 0;
@@ -61,7 +58,8 @@ public class MSReader extends javax.swing.JFrame {
         initComponents();
         checkOS();
         checkConfig();
-        setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
+        // Cause frame to automatically expand
+//        setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
         splitPane.setDividerLocation(.5);
         splitPane.setResizeWeight(.5);
         jPanel2.setMinimumSize(new Dimension(10, 10));
@@ -91,7 +89,9 @@ public class MSReader extends javax.swing.JFrame {
     }
     
     public static HDExchange getHDExchangeInstance () {
-        if ( hdExchangeInstance == null ) hdExchangeInstance = new HDExchange();
+        if ( hdExchangeInstance == null ) {
+            hdExchangeInstance = new HDExchange();
+        }
         return hdExchangeInstance;
     }
     
@@ -222,9 +222,6 @@ public class MSReader extends javax.swing.JFrame {
         jTextField1.setLocation(jLabel1.getX() + jLabel1.getWidth() + 5, jLabel1.getY());
     }
     
-//   public void setExchangePt (String key, double centroid) {
-//       exchange.changePt(key, centroid);
-//   }
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -267,7 +264,7 @@ public class MSReader extends javax.swing.JFrame {
         experimentalMenu = new javax.swing.JMenu();
         autoHDX = new javax.swing.JMenuItem();
         manualHDX = new javax.swing.JMenuItem();
-        jMenuItem2 = new javax.swing.JMenuItem();
+        generateHeatMap = new javax.swing.JMenuItem();
         sequenceEngine = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -496,13 +493,13 @@ public class MSReader extends javax.swing.JFrame {
         });
         experimentalMenu.add(manualHDX);
 
-        jMenuItem2.setText("Generate heat map");
-        jMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+        generateHeatMap.setText("Generate heat map");
+        generateHeatMap.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItem2ActionPerformed(evt);
+                generateHeatMapActionPerformed(evt);
             }
         });
-        experimentalMenu.add(jMenuItem2);
+        experimentalMenu.add(generateHeatMap);
 
         sequenceEngine.setText("Sequencing engine");
         sequenceEngine.addActionListener(new java.awt.event.ActionListener() {
@@ -1025,7 +1022,6 @@ public class MSReader extends javax.swing.JFrame {
         smoothed = false;
     }//GEN-LAST:event_getSpecAtTimeActionPerformed
 
-
     private void viewHDExchangeMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_viewHDExchangeMenuActionPerformed
         if ( hdExchangeInstance == null ) {
             Utils.showErrorMessage("No HDX initialized");
@@ -1037,12 +1033,11 @@ public class MSReader extends javax.swing.JFrame {
         ChoosePeakNo cpn = new ChoosePeakNo (this, true);
         cpn.setLocationRelativeTo(this);
         cpn.setVisible(true);
-        Peptide current = cpn.getPeptide();
+        Peptide current = cpn.getPeptides()[0];
         hdExchangeInstance.setPeptide( current );
         hdExchangeInstance.analyze();
     }//GEN-LAST:event_viewHDExchangeMenuActionPerformed
-
-        
+      
     private void chromOptionsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chromOptionsActionPerformed
         Chromatogram_Options cho = new Chromatogram_Options(this, true);
         cho.setLocationRelativeTo(this);
@@ -1097,6 +1092,35 @@ public class MSReader extends javax.swing.JFrame {
         HDX.setVisible(true);
     }//GEN-LAST:event_openHDXActionPerformed
     
+    private void exportHDX (File[] files, File out) {
+        String outstr = "";
+        for ( File f: files ) {
+            try{
+                ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f)); 
+                HDRun hdr = (HDRun)ois.readObject();
+                ois.close();
+                outstr += hdr.getSummaryString();
+            } catch ( Exception exc ) {
+                exc.printStackTrace();
+            }
+        }
+        try {
+            if (out.exists()) {
+                    int opt = JOptionPane.showOptionDialog(null, (Object)out.toString() +" already exists. Overwrite?",
+                        "Overwrite file", JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, 
+                        null, new Object[] {"Yes", "No"}, (Object)"Yes");
+                    if (opt == 1) { return; }
+                    out.delete();
+                }
+            out.createNewFile(); 
+            FileOutputStream fos = new FileOutputStream(out);
+            fos.write(outstr.getBytes());
+            fos.close();
+        } catch ( Exception exc ) { 
+            exc.printStackTrace();
+        }
+        
+    }
     private void exportSingleHDX (File f, File filepath) {
         final LoadingDialog ld = new LoadingDialog(this, false);
         ld.setLocationRelativeTo(this);
@@ -1275,10 +1299,12 @@ public class MSReader extends javax.swing.JFrame {
                 savepath = fileChooser.getSelectedFile();
             }
             else return; 
-            final File path = new File(savepath.toString() + ".xlsx");
+            final File path = new File(savepath.toString() + ".tsv");
             // TODO: test this - I don't think I should need two different 
             // methods here but I'm not sure
-            exportMultipleHDX( files, path );
+//            exportMultipleHDX( files, path );
+           
+            exportHDX( files, path );
 //            if (files.length > 1) exportMultipleHDX(files, path);
 //            else exportSingleHDX(files[0], path);
         }
@@ -1408,12 +1434,18 @@ public class MSReader extends javax.swing.JFrame {
         ChoosePeakNo cpn = new ChoosePeakNo(this, true);
         cpn.setLocationRelativeTo(this);
         cpn.setVisible(true);
-        final Peptide pept = cpn.getPeptide();
+        final Peptide[] pept = cpn.getPeptides();
         if (pept == null) return;
         final LoadingDialog ld = new LoadingDialog(null, false);
         
-        hdExchangeInstance = new HDExchange();
-        hdExchangeInstance.setPeptide( pept );
+        // edited to allow for multiple HDExchangeInstances with multiple peptides
+        final HDExchange[] hdExchangeInstances = new HDExchange[pept.length];
+        for ( int i = 0; i < pept.length; ++i ) {
+            hdExchangeInstances[ i ] = new HDExchange();
+            hdExchangeInstances[ i ].setPeptide( pept[ i ] );
+        }
+//        hdExchangeInstance = new HDExchange();
+//        hdExchangeInstance.setPeptide( pept );
         
         // Saves current MSC to place back on the screen after running auto hdx
         // May be unnecessary and take up a lot of memory
@@ -1436,26 +1468,18 @@ public class MSReader extends javax.swing.JFrame {
                         return null;
                     }
                     
-                    //If zero time point change XIC parameters
-                    if ( Utils.getDeutTimePoint(f.toString()) == 0) eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
-                    else eic = (pept.mz > 1000) ? currentMSC.getEIC(pept.mz - 1, pept.mz + 5): 
-                            currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
-                    elutionIndex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
-
-                    currentMS = currentMSC.spectra[ elutionIndex ];
-                    
-                    if (autoSmooth) {
-                        switch (getIntProperty("smoothType")) {
-                            case 0:
-                                currentMS.smoothMovingAverage(getIntProperty("filter"));
-                                break;
-                            case 1:
-                                currentMS.smoothSavitzkyGolay(getIntProperty("SGfilter"), getIntProperty("SGdegree"));
-                                break;
-                        }
+                    // Iterate through peptides, extract each one from the currently loaded MSChrom
+                    for ( int ii = 0; ii < pept.length; ++ii ) {
+                        //If zero time point change XIC parameters
+                        if ( Utils.getDeutTimePoint(f.toString()) == 0) eic = currentMSC.getEIC(pept[ii].mz - 1, pept[ii].mz + 1);
+                        else eic = (pept[ii].mz > 1000) ? currentMSC.getEIC(pept[ii].mz - 1, pept[ii].mz + 5): 
+                                currentMSC.getEIC(pept[ii].mz - 1, pept[ii].mz + 2);
+                        elutionIndex = currentMSC.getElutionIndexFromEIC(eic, pept[ii].elutiontime);
+                        
+                        currentMS = currentMSC.spectra[ elutionIndex ];
+                        
+                        hdExchangeInstances[ii].addSpectrum( currentMS );
                     }
-                    
-                    hdExchangeInstance.addSpectrum( currentMS );
                     
                     // Erase current chromatogram to save space
                     currentMSC = null;
@@ -1484,9 +1508,13 @@ public class MSReader extends javax.swing.JFrame {
                     return;
                 }
 
-                hdExchangeInstance.analyze();
-                
-                getHDExchangeInstance().updateSummary();
+                for ( HDExchange exchange : hdExchangeInstances ) {
+                    exchange.analyze();
+                    exchange.updateSummary();
+                }
+//                hdExchangeInstance.analyze();
+//                
+//                getHDExchangeInstance().updateSummary();
                 
                 // Cycle through all time points and trim if AutoHDX
                 if ( auto ) hdExchangeInstance.trimAllSpectra();
@@ -1511,7 +1539,7 @@ public class MSReader extends javax.swing.JFrame {
         ChoosePeakNo cpn = new ChoosePeakNo(this, true);
         cpn.setLocationRelativeTo(this);
         cpn.setVisible(true);
-        final Peptide pept = cpn.getPeptide();
+        final Peptide pept = cpn.getPeptides()[0];
         if ( pept == null ) return;
         double[][] eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
         int elutionindex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
@@ -1558,142 +1586,45 @@ public class MSReader extends javax.swing.JFrame {
         eng.setVisible(true);
     }//GEN-LAST:event_sequenceEngineActionPerformed
     
-    private void jMenuItem2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem2ActionPerformed
+    private void generateHeatMapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_generateHeatMapActionPerformed
         ProtectionMapOptions opt = new ProtectionMapOptions(this, true);
         opt.setLocationRelativeTo(this);
         opt.setVisible(true);
         final boolean protection = opt.getExchangeBool();
-        final File pdb = opt.getPDB();
         boolean HDXinput = opt.getHDXBool();
+        if ( !HDXinput ) {
+            Utils.showErrorMessage( "You can't run this from an excel file fuckface" );
+            return;
+        }
         final String seq = opt.getSequence();
         final File outputpath = opt.getOutputPath();
-        if (pdb == null || seq.equals("")) return;
+        if ( seq.equals("") ) return;
         if (!outputpath.getParentFile().exists()) {
             Utils.showErrorMessage ("Invalid script output path");
             return;
         }
-        final HeatMapGradient gradient = getGradient();
-        if (properties.getProperty("pymolpath").equals("")) {
-            final File[] x = new File[1];
-            final LoadingDialog ld = new LoadingDialog (null, false);
-            ld.setLocationRelativeTo(this);
-            ld.setText("Retrieving PyMOL path...");
-            ld.setVisible(true);
-            worker = new SwingWorker <Void, Void>() {
-                @Override
-                protected Void doInBackground() throws Exception {
-                    x[0] = ProtectionMap.getPymolLocation();
-                    return null;
-                }
-
-                @Override
-                public void done() {
-                    ld.dispose();
-                    if (x[0] == null) {
-                        Utils.showMessage("Could not locate Pymol executable on your system. Please select its path");
-                        fileChooser = new JFileChooser();
-                        fileChooser.setFileFilter(fileChooser.getAcceptAllFileFilter());
-                        fileChooser.setCurrentDirectory(documents);
-                        fileChooser.setVisible(true);
-                        int returnVal = fileChooser.showOpenDialog(null);
-                        if (returnVal == JFileChooser.APPROVE_OPTION) {
-                            x[0] = fileChooser.getSelectedFile();
-                        } 
-                        else return;
-                    }
-            
-            
-            properties.setProperty("pymolpath", x[0].toString());
-            saveProperties();
-                }
-            };
-            worker.execute();
-        }
         
-        final File pymol = new File (properties.getProperty("pymolpath"));
         if (HDXinput) {
             final HDRun[][] sender;
             
-            if (protection) {
-                fileChooser.setFileFilter(ExtensionFilter.hdxfilter);
-                fileChooser.setMultiSelectionEnabled(true);
-                fileChooser.setDialogTitle("Choose HDX files for free state");
-                fileChooser.setCurrentDirectory(msreaderFiles);
-                fileChooser.setSelectedFile(new File (""));
-                fileChooser.setVisible(true);
-                int returnVal = fileChooser.showOpenDialog(this);
-                if (returnVal != JFileChooser.APPROVE_OPTION) return;
-                File[] filegroup = fileChooser.getSelectedFiles();
-
-                HDRun[] hdfree = new HDRun[filegroup.length];
-                for (int i = 0; i < filegroup.length; i++) {
-                    ObjectInputStream in;
-                    try {
-                        in = new ObjectInputStream(new FileInputStream(filegroup[i]));
-                        HDRun hdx = (HDRun)in.readObject();
-                        hdfree[i] = hdx;
-                    } catch (IOException ex) {Utils.showErrorMessage ("Unable to load HDX files");
-                        Utils.logException (bin, ex, "Couldn't load HDX");} catch(ClassNotFoundException e) {
-                        Utils.showErrorMessage ("Unable to load HDX files");
-                        Utils.logException (bin, e, "Couldn't load HDX");
-                    }
-                }
-                
-                fileChooser.setDialogTitle("Choose HDX files for bound state");
-                fileChooser.setCurrentDirectory(msreaderFiles);
-                fileChooser.setSelectedFile(new File (""));
-                fileChooser.setVisible(true);
-                returnVal = fileChooser.showOpenDialog(this);
-                if (returnVal != JFileChooser.APPROVE_OPTION) return;
-                filegroup = fileChooser.getSelectedFiles();
-                
-                HDRun[] hdbound = new HDRun[filegroup.length];
-                for (int i = 0; i < filegroup.length; i++) {
-                    ObjectInputStream in;
-                    try {
-                        in = new ObjectInputStream(new FileInputStream(filegroup[i]));
-                        HDRun hdx = (HDRun)in.readObject();
-                        hdbound[i] = hdx;
-                    } catch (IOException ex) {Utils.showErrorMessage ("Unable to load HDX files");
-                        Utils.logException (bin, ex, "Couldn't load HDX");} catch (ClassNotFoundException e) {
-                        Utils.showErrorMessage ("Unable to load HDX files");
-                        Utils.logException (bin, e, "Couldn't load HDX");
-                    }
-                }
+            // If this is a protection map, need to load two sets of HDX files
+            if ( protection ) {
+                HDRun[] free = loadHDXFiles( "Choose HDX files for free state" );
+                if ( free.length == 0 ) return;
+                HDRun[] bound = loadHDXFiles( "Choose HDX files for bound state" );
+                if ( bound.length == 0 ) return;
                 
                 sender = new HDRun[2][];
-                sender[0] = hdfree;
-                sender[1] = hdbound;
+                sender[0] = free;
+                sender[1] = bound;
                 
             } else {
-                fileChooser.setMultiSelectionEnabled(true);
-                fileChooser.setFileFilter(ExtensionFilter.hdxfilter);
-                fileChooser.setDialogTitle("Choose HDX files for heat map generation");
-                fileChooser.setCurrentDirectory(msreaderFiles);
-                fileChooser.setSelectedFile(new File (""));
-                fileChooser.setVisible(true);
-                int returnVal = fileChooser.showOpenDialog(this);
-                if (returnVal != JFileChooser.APPROVE_OPTION) return;
-                File[] filegroup = fileChooser.getSelectedFiles();
-
-                HDRun[] hdfree = new HDRun[filegroup.length];
-                for (int i = 0; i < filegroup.length; i++) {
-                    ObjectInputStream in;
-                    try {
-                        in = new ObjectInputStream(new FileInputStream(filegroup[i]));
-                        HDRun hdx = (HDRun)in.readObject();
-                        hdfree[i] = hdx;
-                    } catch (IOException ex) {Utils.showErrorMessage ("Unable to load HDX files");
-                        Utils.logException (bin, ex, "Couldn't load HDX");} catch(ClassNotFoundException e) {
-                        Utils.showErrorMessage ("Unable to load HDX files");
-                        Utils.logException (bin, e, "Couldn't load HDX");
-                    }
-                }
+                HDRun[] hdrs = loadHDXFiles( "Choose HDX files for heat map" );
+                if ( hdrs.length == 0 ) return;
                 
                 sender = new HDRun[1][];
-                sender[0] = hdfree;
+                sender[0] = hdrs;
             }
-            
             
             final LoadingDialog ld = new LoadingDialog(this, false);
             ld.setText("Generating heat map...");
@@ -1702,7 +1633,7 @@ public class MSReader extends javax.swing.JFrame {
             worker = new SwingWorker<Void, Void>() {
                 @Override
                 protected Void doInBackground () {
-                    ProtectionMap.createProtectionMap(sender, pdb, pymol, outputpath, gradient, seq);
+                    ProtectionMap.createProtectionMap(sender, outputpath, seq);
                     return null;
                 }
                 
@@ -1711,71 +1642,44 @@ public class MSReader extends javax.swing.JFrame {
                     try {
                         ld.dispose();
                         get();
-                    } catch (InterruptedException ex) { Utils.logException(bin, ex, "swing worker interrupted");} catch(ExecutionException i) {
+                    } catch (InterruptedException ex) { 
+                        Utils.logException(bin, ex, "swing worker interrupted");
+                    } catch(ExecutionException i) {
                         Utils.logException(bin, i, "swing worker interrupted");
                     }
                 }
             };
             worker.execute();
-        } else {
-            final File[] excelpaths;
-            if (protection) {
-                Utils.showMessage("Select excel file for free state");
-                fileChooser.setCurrentDirectory(documents);
-                fileChooser.setSelectedFile(new File(""));
-                fileChooser.setFileFilter(fileChooser.getAcceptAllFileFilter());
-                fileChooser.setVisible(true);
-                fileChooser.setDialogTitle("Select excel file for free state");
-                int returnVal = fileChooser.showOpenDialog(this);
-                if (returnVal != JFileChooser.APPROVE_OPTION) return;
-                excelpaths = new File[2];
-                excelpaths[0] = fileChooser.getSelectedFile();
-                Utils.showMessage ("Select excel file for bound state");
-                fileChooser.setCurrentDirectory(documents);
-                fileChooser.setSelectedFile(new File(""));
-                fileChooser.setFileFilter(fileChooser.getAcceptAllFileFilter());
-                fileChooser.setVisible(true);
-                fileChooser.setDialogTitle("Select excel file for bound state");
-                returnVal = fileChooser.showOpenDialog(this);
-                if (returnVal != JFileChooser.APPROVE_OPTION) return;
-                excelpaths[1] = fileChooser.getSelectedFile();
-            } else {
-                Utils.showMessage("Select excel file with heat map data");
-                fileChooser.setCurrentDirectory(documents);
-                fileChooser.setSelectedFile(new File(""));
-                fileChooser.setFileFilter(fileChooser.getAcceptAllFileFilter());
-                fileChooser.setVisible(true);
-                fileChooser.setDialogTitle("Select excel file to generate heat map");
-                int returnVal = fileChooser.showOpenDialog(this);
-                if (returnVal != JFileChooser.APPROVE_OPTION) return;
-                excelpaths = new File[1];
-                excelpaths[0] = fileChooser.getSelectedFile();
+        } 
+    }//GEN-LAST:event_generateHeatMapActionPerformed
+
+    private HDRun[] loadHDXFiles ( String dialogTitle ) {
+        fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setFileFilter(ExtensionFilter.hdxfilter);
+        fileChooser.setDialogTitle( dialogTitle );
+        fileChooser.setCurrentDirectory(msreaderFiles);
+        fileChooser.setSelectedFile(new File (""));
+        fileChooser.setVisible(true);
+        int returnVal = fileChooser.showOpenDialog(this);
+        if (returnVal != JFileChooser.APPROVE_OPTION) return new HDRun[] {};
+        File[] filegroup = fileChooser.getSelectedFiles();
+
+        HDRun[] hdruns = new HDRun[filegroup.length];
+        for (int i = 0; i < filegroup.length; i++) {
+            ObjectInputStream in;
+            try {
+                in = new ObjectInputStream(new FileInputStream(filegroup[i]));
+                HDRun hdx = (HDRun)in.readObject();
+                hdruns[i] = hdx;
+            } catch (IOException ex) {Utils.showErrorMessage ("Unable to load HDX files");
+                Utils.logException (bin, ex, "Couldn't load HDX");} catch(ClassNotFoundException e) {
+                Utils.showErrorMessage ("Unable to load HDX files");
+                Utils.logException (bin, e, "Couldn't load HDX");
             }
-            final LoadingDialog ld = new LoadingDialog(this, false);
-            ld.setText("Generating heat map....");
-            ld.setLocationRelativeTo(this);
-            ld.setVisible(true);
-            worker = new SwingWorker<Void, Void>() {
-                @Override
-                protected Void doInBackground() {
-                    ProtectionMap.createProtectionMap(excelpaths, pdb, outputpath, pymol, gradient, seq);
-                   return null;
-                }
-
-                @Override
-                protected void done() {
-                    ld.dispose();
-                    try {
-                        get();
-                    } catch (InterruptedException e){Logger.getLogger(MSReader.class.getName()).log(Level.SEVERE, null, e);} catch(ExecutionException ex) {
-                        Logger.getLogger(MSReader.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                }
-            };
-            worker.execute();
         }
-    }//GEN-LAST:event_jMenuItem2ActionPerformed
-
+        return hdruns;
+    }
+    
     public HeatMapGradient getGradient () {
         if (properties.getProperty("gradientpath").equals("")) initGradient();
         if (!new File (properties.getProperty("gradientpath")).exists()) initGradient();
@@ -1872,11 +1776,11 @@ public class MSReader extends javax.swing.JFrame {
     private javax.swing.JMenu file;
     private javax.swing.JFileChooser fileChooser;
     private javax.swing.JMenuBar fileMenuBar;
+    private javax.swing.JMenuItem generateHeatMap;
     private javax.swing.JButton getSpecAtTime;
     private javax.swing.JMenu hdExchangeMenu;
     private javax.swing.JMenu help;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JMenuItem jMenuItem2;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;

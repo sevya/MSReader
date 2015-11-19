@@ -12,6 +12,7 @@ public class MassSpectrum implements Serializable{
     //
     public String msTitle;
     public String runTitle;
+    private double retentionTime; 
     
     public MassSpectrum (double[][] values, String title) {
         msValues = new double[2][values[0].length];
@@ -53,6 +54,10 @@ public class MassSpectrum implements Serializable{
     public void setRunTitle ( String title ) { runTitle = title; }
     
     public void setSpectrumTitle ( String title ) { msTitle = title; }
+    
+    public void setRetentionTime ( double rt ) { retentionTime = rt; }
+    
+    public double getRetentionTime () { return retentionTime; }
     
     public int peakIndex ( double peakValue ) {
         if ( msValues == null ) {

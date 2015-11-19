@@ -7,6 +7,7 @@ import java.util.Comparator;
 import javax.swing.table.DefaultTableModel;
 import org.jfree.data.xy.XYSeries;
 import java.io.Serializable;
+import java.text.DecimalFormat;
 
 /*
 This class holds information for the overall HD exchange experiment. This 
@@ -77,6 +78,30 @@ public class HDExchange implements Serializable {
         return false;
     }
     
+    public double[][] getCentroidData () {
+        double[][] summaryData = new double[ 2 ][ exchangePoints.size() ];
+        for ( int i = 0; i < exchangePoints.size(); ++i ) {
+            summaryData[ 0 ][ i ] = exchangePoints.get( i ).getTimePoint();
+            summaryData[ 1 ][ i ] = exchangePoints.get( i ).getCentroid();
+        }
+        return summaryData;
+    }
+    
+    public double[][] getPercentData () {
+        double[][] summaryData = new double[ 2 ][ exchangePoints.size() ];
+        for ( int i = 0; i < exchangePoints.size(); ++i ) {
+            summaryData[ 0 ][ i ] = exchangePoints.get( i ).getTimePoint();
+            if ( hasZeroTimePoint() ) {
+                summaryData[ 1 ][ i ] = 
+                        exchangePoints.get( i ).getCentroid() - 
+                        exchangePoints.get( 0 ).getCentroid();
+            } else {
+                summaryData[ 1 ][ i ] = exchangePoints.get( i ).getCentroid();
+            }
+        }
+        return summaryData;
+    }
+    
     public double[][] getSummaryData () {
         double[][] summaryData = new double[ 2 ][ exchangePoints.size() ];
         for ( int i = 0; i < exchangePoints.size(); ++i ) {
@@ -93,8 +118,10 @@ public class HDExchange implements Serializable {
     }
     
     public DefaultTableModel getSummaryDataAsTable () {
+        DecimalFormat time_format = new DecimalFormat("###.#");
+        DecimalFormat centroid_format = new DecimalFormat("###.##");
         return new DefaultTableModel( 
-                FormatChange.ArrayToTable( getSummaryData() ), 
+                FormatChange.ArrayToTable( getSummaryData(), time_format, centroid_format ), 
                 new String[] {"time(min)", "centroid"} 
         );
     }
@@ -136,9 +163,10 @@ public class HDExchange implements Serializable {
                 return;
             }
 
-            HDExchangeTimePoint timePoint = new HDExchangeTimePoint( dataRange, 
-                Utils.getDeutTimePoint( scan.getRunTitle() ) 
+            HDExchangeTimePoint timePoint = new HDExchangeTimePoint( this, dataRange, 
+                Utils.getDeutTimePoint( scan.getRunTitle() ), scan.getRetentionTime()  
             );
+
             exchangePoints.add( timePoint );
 
         }
@@ -147,7 +175,7 @@ public class HDExchange implements Serializable {
             timePoint.showWindow();
         }
      
-        hdxSummary = new HDX_Form ();
+        hdxSummary = new HDX_Form (this);
         hdxSummary.setVisible( true );
     }
     

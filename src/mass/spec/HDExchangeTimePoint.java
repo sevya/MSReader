@@ -2,6 +2,7 @@ package mass.spec;
 
 // Class for holding data related to an HD exchange time point
 
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import javax.swing.table.DefaultTableModel;
 import org.apache.commons.lang.ArrayUtils;
@@ -20,17 +21,22 @@ public class HDExchangeTimePoint {
     private double[][] tempData_;
     private double centroid_;
     private final double timePoint_;
+    private double retentionTime_;
+    private HDExchange parent;
     
     public HDExchangeTimePoint ( //Exchange_Popup window, 
-            double[][] range, double timePoint ) {
+            HDExchange par, double[][] range, double timePoint, double retentionTime ) {
+        parent = par;
         dataRange_ = range;
         timePoint_ = timePoint;
+        retentionTime_ = retentionTime;
         // Have to calculate centroid before creating ExchangePopup window
         // That way when it reaches up to get the values they're precalculate
         calculateValues();
         window_ = new Exchange_Popup( this ); 
-        
     }
+    
+    public Peptide getPeptide() { return parent.getPeptide(); }
     
     public void showWindow () {
         window_.setVisible(true);
@@ -56,19 +62,19 @@ public class HDExchangeTimePoint {
             dataRange_[ 1 ] = ArrayUtils.remove( dataRange_[ 1 ], startIndex );
         }  
         calculateValues();
-        MSReader.getHDExchangeInstance().updateSummary();
+        parent.updateSummary();
     }
     
     public void undoDelete () { 
         dataRange_ = tempData_;
         calculateValues();
-        MSReader.getHDExchangeInstance().updateSummary();
+        parent.updateSummary();
 
     }
     
     public DefaultTableModel getDataAsTable () {
         DefaultTableModel table = new DefaultTableModel ( 
-                FormatChange.ArrayToTable( dataRange_ ), 
+                FormatChange.ArrayToTable( dataRange_, new DecimalFormat("###.##"), new DecimalFormat("0.0E0") ), 
                 new String[] {"m/z", "intensity"} 
         );
         return table;
@@ -82,6 +88,10 @@ public class HDExchangeTimePoint {
         centroid_ = MSMath.calcCentroid( dataRange_ );
     }
     
+    public void setRetentionTime (double rt) { retentionTime_ = rt; }
+    
+    public double getRetentionTime () { return retentionTime_; }
+    
      public void trim () {
         backUpData();
         try {
@@ -89,7 +99,7 @@ public class HDExchangeTimePoint {
             dataRange_[ 0 ] = Arrays.copyOfRange(dataRange_[ 0 ], indices[ 0 ], indices[ 1 ]);
             dataRange_[ 1 ] = Arrays.copyOfRange(dataRange_[ 1 ], indices[ 0 ], indices[ 1 ]);
             calculateValues();
-            MSReader.getHDExchangeInstance().updateSummary();
+            parent.updateSummary();
 
         } catch (NoPeakDetectedException e) {
             window_.setError(e.getMessage());
@@ -98,7 +108,7 @@ public class HDExchangeTimePoint {
     
      private int[] peakDetector () throws NoPeakDetectedException {
          // TODO figure out how this is detecting peaks and document it a little
-        double[][] tope = MSReader.getHDExchangeInstance().getPeptide()
+        double[][] tope = parent.getPeptide()
                 .getThreadedDistribution( (int)Math.pow(10, 5) );
         Utils.sort2DArray (tope, 0);
         int endindex = tope[0].length-1;
@@ -147,7 +157,7 @@ public class HDExchangeTimePoint {
         double score = MSMath.getScore(data, isotope);
         double maxscore = score;
         double maxshift = 0;
-        double shift = 1/(double)MSReader.getHDExchangeInstance().getPeptide().charge;
+        double shift = 1/(double)parent.getPeptide().charge;
         while (isotope[0][isotope[0].length-1] < data[0][data[0].length-1]) {
             for (int i = 0; i < isotope[0].length; i++) isotope[0][i] += shift;
             score = MSMath.getScore(data, isotope);

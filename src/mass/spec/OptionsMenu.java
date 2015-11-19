@@ -48,13 +48,6 @@ public class OptionsMenu extends javax.swing.JDialog {
         jLabel7 = new javax.swing.JLabel();
         windowsize = new javax.swing.JTextField();
         jPanel4 = new javax.swing.JPanel();
-        jLabel10 = new javax.swing.JLabel();
-        pymolexe = new javax.swing.JTextField();
-        jButton2 = new javax.swing.JButton();
-        jLabel8 = new javax.swing.JLabel();
-        pdbsave = new javax.swing.JTextField();
-        jButton3 = new javax.swing.JButton();
-        jButton4 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Processing Options");
@@ -256,63 +249,15 @@ public class OptionsMenu extends javax.swing.JDialog {
 
         jTabbedPane1.addTab("Exchange", jPanel3);
 
-        jLabel10.setText("Path of Pymol executable");
-
-        jButton2.setText("Open file browser");
-        jButton2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed(evt);
-            }
-        });
-
-        jLabel8.setText("Default PDB save path");
-
-        jButton3.setText("Open file browser");
-
-        jButton4.setText("Find in system");
-        jButton4.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton4ActionPerformed(evt);
-            }
-        });
-
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
         jPanel4Layout.setHorizontalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel4Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(jLabel10, javax.swing.GroupLayout.DEFAULT_SIZE, 184, Short.MAX_VALUE)
-                        .addComponent(jLabel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton3)
-                        .addComponent(pymolexe, javax.swing.GroupLayout.DEFAULT_SIZE, 296, Short.MAX_VALUE)
-                        .addComponent(pdbsave))
-                    .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addComponent(jButton2)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 108, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(287, Short.MAX_VALUE))
+            .addGap(0, 670, Short.MAX_VALUE)
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel4Layout.createSequentialGroup()
-                .addGap(81, 81, 81)
-                .addComponent(jLabel10)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(pymolexe, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton2)
-                    .addComponent(jButton4))
-                .addGap(28, 28, 28)
-                .addComponent(jLabel8)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(pdbsave, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton3)
-                .addContainerGap(110, Short.MAX_VALUE))
+            .addGap(0, 344, Short.MAX_VALUE)
         );
 
         jTabbedPane1.addTab("Advanced", jPanel4);
@@ -374,8 +319,6 @@ public class OptionsMenu extends javax.swing.JDialog {
         filterInput.setText(msr.getProperty("filter"));
         filterSG.setText(msr.getProperty("SGfilter"));
         degreeSG.setText(msr.getProperty("SGdegree"));
-        pymolexe.setText(msr.getProperty("pymolpath"));
-        pdbsave.setText(msr.getProperty("pdbfetchpath"));
     }
     private void closeDialogActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_closeDialogActionPerformed
         dispose();
@@ -423,13 +366,6 @@ public class OptionsMenu extends javax.swing.JDialog {
             return;
         }
         
-        File pymol = new File (pymolexe.getText());
-        if (pymol.exists()) {
-            msr.setProperty("pymolpath", pymol.toString());
-            msr.saveProperties();
-        } 
-
-        
         dispose();
     }//GEN-LAST:event_acceptChangesActionPerformed
 
@@ -472,57 +408,6 @@ public class OptionsMenu extends javax.swing.JDialog {
         refresh();
     }//GEN-LAST:event_dfaultActionPerformed
 
-    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        pymolexe.setText("");
-        final File[] x = new File[1];
-        final LoadingDialog ld = new LoadingDialog (null, false);
-        ld.setLocationRelativeTo(this);
-        ld.setText("Retrieving PyMOL path...");
-        ld.setVisible(true);
-        SwingWorker worker = new SwingWorker <Void, Void>() {
-            @Override
-            protected Void doInBackground() throws Exception {
-                x[0] = ProtectionMap.getPymolLocation();
-                return null;
-            }
-            
-            @Override
-            public void done() {
-                ld.dispose();
-                try {
-                    get();
-                } catch (InterruptedException ex ) {
-                    Utils.logException(msr.bin, ex);
-                } catch ( ExecutionException ex ) {
-                    Utils.logException(msr.bin, ex);
-                }
-                File temp = x[0];
-                if (temp == null) {
-                    JOptionPane.showMessageDialog(null, "Error: could not locate Pymol executable on your system. "
-                            + "Please ensure that it is correctly installed.","Error",JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-                pymolexe.setText(temp.toString());
-            }
-        };
-        worker.execute();
-    }//GEN-LAST:event_jButton4ActionPerformed
-
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setVisible(true);
-        fileChooser.setDialogTitle("Select path of PyMOL executable");
-        int returnVal = fileChooser.showOpenDialog(this);
-        if (returnVal != JFileChooser.APPROVE_OPTION) return;
-        File temp = fileChooser.getSelectedFile();
-        if (temp == null) {
-            Utils.showErrorMessage("Invalid file");
-            return;
-        }
-        pymolexe.setText(temp.toString());
-    }//GEN-LAST:event_jButton2ActionPerformed
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton acceptChanges;
     private javax.swing.JCheckBox autosmooth;
@@ -534,19 +419,14 @@ public class OptionsMenu extends javax.swing.JDialog {
     private javax.swing.JTextField filterInput;
     private javax.swing.JTextField filterSG;
     private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
     private javax.swing.JCheckBox jCheckBox1;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
-    private javax.swing.JLabel jLabel8;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -555,8 +435,6 @@ public class OptionsMenu extends javax.swing.JDialog {
     private javax.swing.JRadioButton jRadioButton2;
     private javax.swing.JRadioButton jRadioButton3;
     private javax.swing.JTabbedPane jTabbedPane1;
-    private javax.swing.JTextField pdbsave;
-    private javax.swing.JTextField pymolexe;
     private javax.swing.JTextField windowsize;
     // End of variables declaration//GEN-END:variables
 

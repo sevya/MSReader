@@ -8,7 +8,7 @@ public class ChoosePeakNo extends javax.swing.JDialog {
 
     private final MSReader msr;
 //    private int sortKey;
-    private Peptide peptide;
+    private Peptide[] peptides;
     
     public ChoosePeakNo(java.awt.Frame parent, boolean modal) {
         super(parent, "Choose desired peptide", modal);
@@ -69,7 +69,7 @@ public class ChoosePeakNo extends javax.swing.JDialog {
                 "Title 1", "Title 2", "Title 3", "Title 4"
             }
         ));
-        peakList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        peakList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         jScrollPane1.setViewportView(peakList);
 
         getPeakFromList.setText("Go!");
@@ -126,29 +126,34 @@ public class ChoosePeakNo extends javax.swing.JDialog {
     }
     
     private void getPeakFromListActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_getPeakFromListActionPerformed
-        int selected = peakList.getSelectedRow();
-        if (selected == -1) {
+        int[] selected = peakList.getSelectedRows();
+        if (selected.length == 0) {
             Utils.showMessage("No peptide selected");
             return;
         }
-        peptide = msr.getPeptides().elementAt( selected );
+        peptides = new Peptide[ selected.length ];
+        for ( int i = 0; i < selected.length; ++i ) {
+            peptides[ i ] = msr.getPeptides().elementAt(selected[i]);
+        }
         dispose();
     }//GEN-LAST:event_getPeakFromListActionPerformed
 
     private void newpeptideActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_newpeptideActionPerformed
-        EditPeptide ep = new EditPeptide(null, true);
-        ep.setLocationRelativeTo(this);
-        ep.setVisible(true);
-        try {
-            peptide = ep.getPeptide();
-            dispose();
-        } catch (NullPointerException npe) {
-            //edit peptide menu was cancelled - do nothing
-        }
+        Utils.showErrorMessage("This button is under construction");
+        return;
+//        EditPeptide ep = new EditPeptide(null, true);
+//        ep.setLocationRelativeTo(this);
+//        ep.setVisible(true);
+//        try {
+//            peptide = ep.getPeptide();
+//            dispose();
+//        } catch (NullPointerException npe) {
+//            //edit peptide menu was cancelled - do nothing
+//        }
     }//GEN-LAST:event_newpeptideActionPerformed
 
-    public Peptide getPeptide() {
-        return peptide;
+    public Peptide[] getPeptides() {
+        return peptides;
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

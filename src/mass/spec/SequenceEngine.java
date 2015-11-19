@@ -3,6 +3,7 @@ package mass.spec;
 import java.io.*;
 import java.util.*;
 import javax.swing.*;
+import uk.ac.ebi.jmzml.xml.io.MzMLUnmarshallerException;
 
 public class SequenceEngine extends javax.swing.JFrame {
     
@@ -237,8 +238,8 @@ public class SequenceEngine extends javax.swing.JFrame {
             final File datapath = fileChooser.getSelectedFile();
             SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                 @Override
-                protected Void doInBackground() {
-                    c = new MSChrom(datapath);
+                protected Void doInBackground() throws MzMLUnmarshallerException {
+                    c = new MSChrom(datapath, "MZML");
                     datafile.setText(datapath.toString());
                     return null;
                 }
@@ -263,6 +264,7 @@ public class SequenceEngine extends javax.swing.JFrame {
             return;
         } else {
             proteinsequence = sequence.getText();
+            proteinsequence = proteinsequence.replace("\n", "").replace("\r", "").trim();
         }
         
         if (c == null) {
@@ -473,12 +475,14 @@ class SequenceSpectrum implements Runnable {
         }
         for (Double peak: peaks) {
             for (String frag: engine.fragments) {
-                for (int k = 1; k < 6; k++) {
+                for (int k = 1; k < 50; k++) {
                     double mwapprox = (MSMath.mwEstimate(frag)+k)/k;
                     if (Math.abs(mwapprox - peak) < 1) {
                         Peptide temp = new Peptide(frag, k, time);
+                        engine.high_score_matches.add(temp);
                         int peakIndex, startIndex, endIndex;
                         double stepSize;
+//                        MassSpectrum ms = 
                         if (engine.c.SPECTRA_UNIFORM) {
                             peakIndex = Utils.binarySearch(engine.c.mz_values, peak);
                             stepSize = engine.c.mz_values[50] - engine.c.mz_values[49];

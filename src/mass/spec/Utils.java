@@ -231,6 +231,18 @@ public class Utils {
         return FormatChange.StringlistToArray(peptides);
     }
     
+    public static String[] all_peptide_subsets(String str ) {
+        ArrayList<String> temp_list = new ArrayList<String>();
+        for ( int i = 0; i < str.length() - 1; ++i ) {
+            for ( int j = i+1; j < str.length(); ++j ) {
+                temp_list.add( str.substring( i, j ) );
+            }
+        }
+        String[] temp_arr = new String[temp_list.size()];
+        temp_arr = temp_list.toArray( temp_arr );
+        return temp_arr;
+    }
+    
     public static String[] pepsincleavage(String str, int missed) {
         String temp;
         ArrayList<Integer> indices = new ArrayList();
@@ -371,16 +383,9 @@ public class Utils {
     
     public static void main (String[] args)
     {
-        double[] xvals = {0, 5, 10, 15, 20};
-        double[] yvals_unbound = {0, 0.3, 0.4, 0.45, 0.46};
-        double[] yvals_bound = {0, 0.15, 0.2, 0.21, 0.22};
-        HDRun unbound = new HDRun( new double [][] {xvals, yvals_unbound } );
-        HDRun bound = new HDRun( new double [][] {xvals, yvals_bound } );
-        
-        Double[][] diff = compare( unbound, bound );
-        
-        for ( int i = 0; i < diff[ 0 ].length; ++i ) {
-            System.out.println( diff[ 0 ][ i ]+"\t"+diff[ 1 ][ i ] );
-        }
+        Peptide pept = new Peptide("E.ASLGVSSACPYQGKSSF.F", 
+               2, 12.01);
+        System.out.println(pept.sequence);
+        System.out.println(pept.displaySequence);
     }
 }

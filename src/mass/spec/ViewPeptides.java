@@ -5,6 +5,9 @@ import java.io.*;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 
 public class ViewPeptides extends javax.swing.JDialog {
 
@@ -103,6 +106,7 @@ public class ViewPeptides extends javax.swing.JDialog {
         edit = new javax.swing.JButton();
         clear = new javax.swing.JButton();
         extract = new javax.swing.JButton();
+        jButton1 = new javax.swing.JButton();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         newPeptideList = new javax.swing.JMenuItem();
@@ -159,6 +163,13 @@ public class ViewPeptides extends javax.swing.JDialog {
         extract.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 extractActionPerformed(evt);
+            }
+        });
+
+        jButton1.setText("Check accuracy");
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
             }
         });
 
@@ -229,8 +240,9 @@ public class ViewPeptides extends javax.swing.JDialog {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 602, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(extract)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(extract, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(add, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -238,8 +250,8 @@ public class ViewPeptides extends javax.swing.JDialog {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(edit, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(clear)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                        .addComponent(clear)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -250,7 +262,9 @@ public class ViewPeptides extends javax.swing.JDialog {
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 269, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(37, 37, 37)
-                        .addComponent(extract)))
+                        .addComponent(extract)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButton1)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 29, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(add)
@@ -446,12 +460,16 @@ public class ViewPeptides extends javax.swing.JDialog {
                 String str;
                 while ( (str=br.readLine()) != null ) {
                     String[] tiago = str.split("\t|,");
-                    if (tiago.length == 3) {
+                    for (String s : tiago) {
+                        System.out.println(s);
+                    }
+                    if (tiago.length == 4) {
                         try {
                             msr.getPeptides().addPeptide (new Peptide (tiago[0],
-                                    Integer.parseInt(tiago[1]), 
-                                    Double.parseDouble(tiago[2])));
+                                    Integer.parseInt(tiago[2]), 
+                                    Double.parseDouble(tiago[3])));
                         } catch ( Exception e ) {
+                            e.printStackTrace();
                             throw new NumberFormatException();
                         }
                     } else {
@@ -464,6 +482,7 @@ public class ViewPeptides extends javax.swing.JDialog {
             }
             
         } catch (NumberFormatException io) {
+            io.printStackTrace();
             Utils.showErrorMessage("Error: text file is not in correct format");
             Utils.logException( io );
         } catch (IOException n) {
@@ -474,6 +493,99 @@ public class ViewPeptides extends javax.swing.JDialog {
         refresh();
     }//GEN-LAST:event_addFromTxtActionPerformed
 
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        if (msr.currentMS == null) {
+             Utils.showErrorMessage("Error: no spectrum loaded");
+             return;      
+        }
+        if (jTable1.getSelectedRow() == -1) {
+            Utils.showErrorMessage("No peptide selected");
+            return;
+        }
+        int index = jTable1.getSelectedRow();
+        msr.chromatogramType = MSReader.CHROM_TYPE_EIC;
+        Peptide pept = msr.getPeptides().elementAt(index);
+        MSChrom currentMSC = MSReader.getInstance().currentMSC;
+        double[][] eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
+        int elutionindex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
+        MassSpectrum currentMS = currentMSC.spectra[elutionindex];
+
+        currentMS.convertToNonUniform( currentMSC );
+        int windowSize = MSReader.getInstance().getIntProperty("windowSize");
+        
+        double[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
+            
+        double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 6));
+        
+        // Normalize the isotopic distribution percentages
+        double max = MSMath.getMax ( dataRange[ 1 ] ); 
+        max /= MSMath.getMax( isotope[1] );
+        for (int i = 0; i < isotope[1].length; i++) isotope[1][i] *= max;
+        
+        XYSeries dataSeries = FormatChange.ArrayToXYSeries( dataRange ); 
+        
+        XYSeries isotopeSeries = FormatChange.ArrayToXYSeries(isotope, "tope");
+        
+        // Hack to force lines to go back to zero on either side of isotopic peak
+        for (int i = 0; i < isotope[0].length; i++) {
+            isotopeSeries.add( isotope[0][i], 0.0 );
+            isotopeSeries.add( isotope[0][i], Double.NaN );
+        }
+        
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        dataset.addSeries( dataSeries );
+        dataset.addSeries( isotopeSeries );
+        JFreeChart chart = Utils.drawChart( dataset, pept.displaySequence, 
+                "m/z","intensity" );
+        
+        Peak_Zoom pz = new Peak_Zoom();
+        pz.setChart(chart);
+        pz.expandGraph();
+        pz.setTitle( MSMath.getScore( dataRange, isotope ) + "" );
+        pz.setVisible(true);
+        dispose();
+    }//GEN-LAST:event_jButton1ActionPerformed
+
+    private ArrayList<Peptide> importPeptides ( String filename ) {
+        ArrayList<Peptide> peptides = new ArrayList();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(filename));
+            try {
+                String str;
+                while ( (str=br.readLine()) != null ) {
+                    String[] tiago = str.split("\t|,");
+                    for (String s : tiago) {
+                        System.out.println(s);
+                    }
+                    if (tiago.length == 4) {
+                        try {
+                            peptides.add( new Peptide (tiago[0],
+                                    Integer.parseInt(tiago[2]), 
+                                    Double.parseDouble(tiago[3])) );
+                        } catch ( Exception e ) {
+                            e.printStackTrace();
+                            throw new NumberFormatException();
+                        }
+                    } else {
+                        System.out.println("token count: "+tiago.length);
+                        throw new NumberFormatException();
+                    }
+                } 
+            } finally {
+                br.close(); 
+            }
+
+        } catch (NumberFormatException io) {
+            io.printStackTrace();
+            Utils.showErrorMessage("Error: text file is not in correct format");
+            Utils.logException( io );
+        } catch (IOException n) {
+            Utils.showErrorMessage("Error: could not read file");
+            Utils.logException( n );
+        }
+        return peptides;
+    }
+    
     private void refresh() {
         DefaultTableModel d = FormatChange.PeptidesToDTM( msr.getPeptides() );
         jTable1.setModel(d);
@@ -487,6 +599,7 @@ public class ViewPeptides extends javax.swing.JDialog {
     private javax.swing.JButton delete;
     private javax.swing.JButton edit;
     private javax.swing.JButton extract;
+    private javax.swing.JButton jButton1;
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JScrollPane jScrollPane1;

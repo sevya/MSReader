@@ -16,6 +16,7 @@ public class AutoHDXSetup extends javax.swing.JDialog {
         initComponents();
         model = new DefaultListModel();
         fileChooser = new JFileChooser();
+        fileChooser.setCurrentDirectory( MSReader.getInstance().msreaderFiles );
         jList1.setModel(model);
     }
 
