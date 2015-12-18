@@ -208,6 +208,14 @@
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="generateHeatMapActionPerformed"/>
               </Events>
             </MenuItem>
+            <MenuItem class="javax.swing.JMenuItem" name="calcSignificance">
+              <Properties>
+                <Property name="text" type="java.lang.String" value="Calculate significance "/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="calcSignificanceActionPerformed"/>
+              </Events>
+            </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="sequenceEngine">
               <Properties>
                 <Property name="text" type="java.lang.String" value="Sequencing engine"/>

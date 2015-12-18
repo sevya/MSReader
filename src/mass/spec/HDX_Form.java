@@ -61,19 +61,19 @@ public class HDX_Form extends javax.swing.JFrame {
    
     private void updateTable () {
         // TODO fix this to not take in a singleton
-        DefaultTableModel dtm = parent.getSummaryDataAsTable();
+        DefaultTableModel dtm = parent.getPercentDataAsTable();
         jTable1.setModel(dtm);
         jTable1.revalidate();
     }
     
     private void updatePlot () {
 
-        XYSeries ser = parent.getSummaryDataAsXYSeries();
+        XYSeries ser = parent.getPercentDataAsXYSeries();
         XYSeriesCollection coll = new XYSeriesCollection();
         coll.addSeries(ser);
         
         final NumberAxis xAxis = new NumberAxis( "time(min)" );
-        final ValueAxis yAxis = new NumberAxis( "D/residue" );
+        final ValueAxis yAxis = new NumberAxis( "% deuteration" );
         final XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         renderer.setSeriesLinesVisible(0, false);
         XYPlot plot = new XYPlot (coll, xAxis, yAxis, (XYItemRenderer)renderer);
@@ -131,6 +131,9 @@ public class HDX_Form extends javax.swing.JFrame {
     
     public Peptide getPeptide() { return peptide_; }
 
+    public void plotHDRunsNew ( HDRun[] hdruns ) {
+        
+    }
     public void plotHDRuns ( HDRun[] hdruns ) {
         expandGraph();
         XYSeriesCollection dataset = new XYSeriesCollection();
@@ -141,7 +144,7 @@ public class HDX_Form extends javax.swing.JFrame {
         JFreeChart chart = ChartFactory.createXYLineChart(
                 charttitle,
                 "time (min)",
-                "D/res",
+                "% deuteration",
                 dataset,
                 PlotOrientation.VERTICAL,
                 true,
@@ -226,7 +229,7 @@ public class HDX_Form extends javax.swing.JFrame {
     }
     
     public void setParameters (HDRun hdr) {
-        DefaultTableModel d = new DefaultTableModel(hdr.getExchangeValues(), new String[] {"time(min)", "D/res"});
+        DefaultTableModel d = new DefaultTableModel(hdr.getExchangeValues(), new String[] {"time(min)", "% deuteration"});
         jTable1.setModel(d);
         jScrollPane1.setViewportView(jTable1);
         jScrollPane1.revalidate();        
@@ -251,7 +254,7 @@ public class HDX_Form extends javax.swing.JFrame {
         JFreeChart chart = ChartFactory.createXYLineChart(
                 hdr.getPeptide().displaySequence, 
                 "time(min)", 
-                "D/residue", 
+                "% deuteration", 
                 dataset, 
                 PlotOrientation.VERTICAL, 
                 false, 
@@ -529,7 +532,7 @@ public class HDX_Form extends javax.swing.JFrame {
         XYSeriesCollection collection = new XYSeriesCollection();
         collection.addSeries(dataSeries);
         final NumberAxis xAxis = new NumberAxis("time(min)");
-        final ValueAxis yAxis = new NumberAxis("D/residue");
+        final ValueAxis yAxis = new NumberAxis("% deuteration");
         final XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         renderer.setSeriesLinesVisible(0, false);
         XYPlot plot = new XYPlot (collection, xAxis, yAxis, (XYItemRenderer)renderer);

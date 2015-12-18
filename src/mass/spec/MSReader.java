@@ -9,10 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.*;
-import org.apache.poi.xssf.usermodel.*;
 import org.jfree.chart.*;
 import org.jfree.chart.entity.*;
 import org.jfree.data.xy.*;
@@ -22,27 +19,30 @@ import uk.ac.ebi.jmzml.xml.io.MzMLUnmarshallerException;
 
 public class MSReader extends javax.swing.JFrame {
 
+    public enum chromType { CHROM_TYPE_TIC, CHROM_TYPE_BPC, CHROM_TYPE_EIC }
+    public enum smooth { NONE, SMOOTH_MOVING_AVG, SMOOTH_SAV_GOL }
+    
     public MassSpectrum currentMS;
     private Properties properties;
-    File documents=null, msreaderFiles=null, bin=null, temp=null;
+    public File documents=null, msreaderFiles=null, bin=null;
     public ArrayList<MassSpectrum> loadedMS = new ArrayList();
     public MSChrom currentMSC = null;
     public boolean smoothed = false;
-    public static final int CHROM_TYPE_EIC = 2;
-    public static final int CHROM_TYPE_BPC = 1;
-    public static final int CHROM_TYPE_TIC = 0;
-    public int chromatogramType = CHROM_TYPE_TIC;
+
+    public chromType chromatogramType = chromType.CHROM_TYPE_TIC;
+    public smooth smoothType = smooth.NONE;
     public double[] XICrange;
     public MSChrom controlScan;
     public boolean autoBSB = false;
     public boolean autoSmooth = false;
+    
+    // TODO refactor smoothing type as enum instead of integer
     public static final int SMOOTH_MOVING_AVG = 0;
     public static final int SMOOTH_SAV_GOL = 1;
+    
     private double stepSize;
     private SwingWorker worker;
     private PeptideList peptides_;
-    public static final int COLOR_RED = 0;
-    public static final int COLOR_BLUE = 1;
     
     // Singleton instance of MSReader
     private static MSReader instance;
@@ -112,15 +112,13 @@ public class MSReader extends javax.swing.JFrame {
     
     public void setProperty( String key, String value ) { properties.setProperty( key, value ); }
     
+    ///@brief Sets up paths for MSReader files folder and subfolders
     private void checkOS() {
         try {
             documents = new File (Utils.osjoin(System.getProperty("user.home"), "Documents"));
-
             msreaderFiles = Utils.osjoin(documents, "MSReader files");
             bin = Utils.osjoin(msreaderFiles, "bin");
-            temp = Utils.osjoin(msreaderFiles, "temp");
             if (!msreaderFiles.exists()) msreaderFiles.mkdir();
-            if (!temp.exists()) temp.mkdir();
             if (!bin.exists()) bin.mkdir();
 
         } catch ( Exception exc ) {
@@ -128,6 +126,23 @@ public class MSReader extends javax.swing.JFrame {
         }
     }
     
+    ///@brief Reads configuration file to get user-specified properties
+    private void checkConfig () {
+        File f = Utils.osjoin(bin, "config.properties");
+        if (f.exists()) {
+            properties = new Properties();
+            try {
+                properties.load(new FileInputStream (Utils.osjoin(bin, "config.properties")));
+            } catch (IOException io) {
+                initConfig();
+            }
+        } else {
+            initConfig();
+        }
+    }
+    
+    ///@brief Gets peptide list at start up if there is a default list specified,
+    ///@brief otherwise creates an empty list
     private void populatePeptides() {
         File peptidepath = new File (properties.getProperty("peptidepath"));
         if (!peptidepath.exists()) {
@@ -150,38 +165,24 @@ public class MSReader extends javax.swing.JFrame {
             }
         }
     }
-     
-    private void checkConfig () {
-        File f = Utils.osjoin(bin, "config.properties");
-        if (f.exists()) {
-            properties = new Properties();
-            try {
-                properties.load(new FileInputStream (Utils.osjoin(bin, "config.properties")));
-            } catch (IOException io) {
-                initConfig();
-            }
-        } else {
-            initConfig();
-        }
-    }
     
+    ///@brief Creates a new default configuration file
     public void initConfig() {
         properties = new Properties();
-        //set appropriate properties here
+        //Set appropriate properties
         properties.setProperty("filter", "5");
         properties.setProperty("SGfilter", "5");
         properties.setProperty("SGdegree", "4");
         properties.setProperty("smoothType", ""+SMOOTH_SAV_GOL);
         properties.setProperty("windowSize", "10");
         properties.setProperty("peptidepath", "");
-        properties.setProperty("heatmapcolor", ""+COLOR_RED);
         properties.setProperty("pymolpath", "");
-        properties.setProperty("pdbfetchpath", temp.toString());
         properties.setProperty("gradientpath", "");
     
         saveProperties();
     }
     
+    ///@brief Save properties to config file in the MSReader files/bin directory
     public void saveProperties () {
         try {
             FileOutputStream out = new FileOutputStream( 
@@ -197,10 +198,12 @@ public class MSReader extends javax.swing.JFrame {
         }
     }
     
+    ///@brief Returns the value of an integer property
     public int getIntProperty ( String key ) {
         return Integer.parseInt(properties.getProperty(key));
     }
     
+    ///@brief Resize window to the right proportions when something is moved
     private void resize() {
         int frameW = this.getWidth();
         int frameH = this.getHeight();
@@ -265,6 +268,7 @@ public class MSReader extends javax.swing.JFrame {
         autoHDX = new javax.swing.JMenuItem();
         manualHDX = new javax.swing.JMenuItem();
         generateHeatMap = new javax.swing.JMenuItem();
+        calcSignificance = new javax.swing.JMenuItem();
         sequenceEngine = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -501,6 +505,14 @@ public class MSReader extends javax.swing.JFrame {
         });
         experimentalMenu.add(generateHeatMap);
 
+        calcSignificance.setText("Calculate significance ");
+        calcSignificance.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                calcSignificanceActionPerformed(evt);
+            }
+        });
+        experimentalMenu.add(calcSignificance);
+
         sequenceEngine.setText("Sequencing engine");
         sequenceEngine.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -579,6 +591,7 @@ public class MSReader extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
      
+    ///@brief Create generic charts for start-up
     private void startUpCharts() {
         XYSeriesCollection dataset = new XYSeriesCollection();
         JFreeChart chart = Utils.drawChart( dataset, "Load a CDF file to begin...","time","" );
@@ -593,164 +606,75 @@ public class MSReader extends javax.swing.JFrame {
         jPanel2.revalidate();
     }
 
+    ///@brief Repopulate chromatogram based on currently loaded MSChrom object,
+    ///@brief add handler to pull up spectrum in the right window
     public final void refreshChromatogram() {
         if (currentMSC == null) {
             startUpCharts();
             return;
         }
-        if (chromatogramType == CHROM_TYPE_TIC) {
-            XYSeriesCollection dataset = new XYSeriesCollection();
-            dataset.addSeries(FormatChange.ArrayToXYSeries(currentMSC.TIC));
-            JFreeChart chart = Utils.drawChart( dataset, currentMSC.title + " Total Ion Chromatogram","time(min)","" );
-            ChartPanel chartPanel = new ChartPanel (chart);
-            chartPanel.setPreferredSize(new java.awt.Dimension(785, 440));
-            jPanel1.removeAll();
-            jPanel1.add(chartPanel, BorderLayout.CENTER);
-            jPanel1.revalidate();
-            final MSChrom cf = currentMSC;
-            final XYSeriesCollection specData = new XYSeriesCollection();
-            chartPanel.addChartMouseListener(new ChartMouseListener () {
-                @Override
-                public void chartMouseClicked(ChartMouseEvent cme) {
-                    jPanel2.removeAll();
-                    ChartEntity entity = cme.getEntity();
-                    if (entity != null && entity instanceof XYItemEntity) {
-                        XYItemEntity ent = (XYItemEntity) entity;
-                        int iindex = ent.getItem();
-                        currentMS = cf.spectra[iindex];
-                        XYSeries spec;
-                        if (cf.SPECTRA_UNIFORM) spec = FormatChange.ArrayToXYSeries(cf.mz_values, currentMS.yvals);
-                        else spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
-                        specData.removeAllSeries();
-                        specData.addSeries(spec);
-                        JFreeChart chart2 = Utils.drawChart( specData, cf.spectra[iindex].msTitle, 
-                                "m/z", "intensity");
-                        ChartPanel chartPanel2 = new ChartPanel(chart2);
-                        chartPanel2.setMouseWheelEnabled(false);
-                        jPanel2.add(chartPanel2, BorderLayout.CENTER);
-                        jPanel2.revalidate();
-                        smoothed = false;
-                    }
-                }
-
-                @Override
-                public void chartMouseMoved(ChartMouseEvent cme) {
-                }
-            });
-        } 
-        if (chromatogramType == CHROM_TYPE_BPC) {
-            double[][] bpc = currentMSC.getBPC();
-            XYSeriesCollection dataset = new XYSeriesCollection();
-            dataset.addSeries(FormatChange.ArrayToXYSeries(bpc));
-            JFreeChart chart = Utils.drawChart( dataset, currentMSC.title + " Base Peak Chromatogram","time(min)","" );
-            ChartPanel chartPanel = new ChartPanel (chart);
-            chartPanel.setPreferredSize(new java.awt.Dimension(785, 440));
-            jPanel1.removeAll();
-            jPanel1.add(chartPanel, BorderLayout.CENTER);
-            jPanel1.revalidate();  
-            final MSChrom cf = currentMSC;
-            final XYSeriesCollection specData = new XYSeriesCollection();
-            XYSeries spec; 
-            if (currentMS.msValues == null) {
-                spec = FormatChange.ArrayToXYSeries(cf.mz_values, currentMS.yvals);
-            } else {
-                spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
-            }
-            specData.addSeries(spec);
-            JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
-            ChartPanel cp = new ChartPanel(chart2);
-            cp.setMouseWheelEnabled(false);
-            jPanel2.add(cp, BorderLayout.CENTER);
-            jPanel2.revalidate();
-            chartPanel.addChartMouseListener(new ChartMouseListener () {
-                @Override
-                public void chartMouseClicked(ChartMouseEvent cme) {
-                    jPanel2.removeAll();
-                    ChartEntity entity = cme.getEntity();
-                    if (entity != null && entity instanceof XYItemEntity) {
-                        XYItemEntity ent = (XYItemEntity) entity;
-                        int iindex = ent.getItem();
-                        currentMS = cf.spectra[iindex];
-                        XYSeries spec; 
-                        if (currentMS.msValues == null) {
-                            spec = FormatChange.ArrayToXYSeries(cf.mz_values, currentMS.yvals);
-                        } else {
-                            spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
-                        }
-                        specData.removeAllSeries();
-                        specData.addSeries(spec);
-                        JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
-                        ChartPanel chartPanel2 = new ChartPanel(chart2);
-                        chartPanel2.setMouseWheelEnabled(false);
-                        jPanel2.add(chartPanel2, BorderLayout.CENTER);
-                        jPanel2.revalidate();
-                        smoothed = false;
-                    }
-                }
-
-                @Override
-                public void chartMouseMoved(ChartMouseEvent cme) {
-                }
-            });
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        JFreeChart chart = null;
+        
+        switch ( chromatogramType ) {
+            case CHROM_TYPE_TIC:
+                dataset.addSeries(FormatChange.ArrayToXYSeries(currentMSC.TIC));
+                chart = Utils.drawChart( dataset, currentMSC.title + " Total Ion Chromatogram",
+                        "time(min)","" );
+                break;
+            case CHROM_TYPE_BPC:
+                double[][] bpc = currentMSC.getBPC();
+                dataset.addSeries( FormatChange.ArrayToXYSeries(bpc) );
+                chart = Utils.drawChart( dataset, currentMSC.title + " Base Peak Chromatogram",
+                        "time(min)","" );
+                break;
+            case CHROM_TYPE_EIC:
+                double[][] eic = currentMSC.getEIC(XICrange[0], XICrange[1]);
+                dataset.addSeries(FormatChange.ArrayToXYSeries(eic));
+                chart = Utils.drawChart( dataset, currentMSC.title + 
+                        " EIC Range " + String.format("%.2f",XICrange[0]) + "-" + 
+                        String.format("%.2f",XICrange[1]),
+                        "time(min)","" );
+                break;
         }
-        if (chromatogramType == CHROM_TYPE_EIC) {
-            double[][] eic = currentMSC.getEIC(XICrange[0], XICrange[1]);
-            XYSeriesCollection dataset = new XYSeriesCollection();
-            dataset.addSeries(FormatChange.ArrayToXYSeries(eic));
-            JFreeChart chart = Utils.drawChart( dataset, currentMSC.title + " EIC Range " + XICrange[0] + "-" + XICrange[1],"time(min)","" );
-            ChartPanel chartPanel = new ChartPanel(chart);
-            chartPanel.setPreferredSize(new java.awt.Dimension(785, 440));
-            jPanel1.removeAll();
-            jPanel1.add(chartPanel, BorderLayout.CENTER);
-            jPanel1.revalidate();  
-            final MSChrom cf = currentMSC;
-            final XYSeriesCollection specData = new XYSeriesCollection();
-            XYSeries spec;
-            if (currentMS.msValues == null) {
-                spec = FormatChange.ArrayToXYSeries(cf.mz_values, currentMS.yvals);
-            } else {
-                spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
+        ChartPanel chartPanel = new ChartPanel (chart);
+        chartPanel.setPreferredSize(new java.awt.Dimension(785, 440));
+        jPanel1.removeAll();
+        jPanel1.add(chartPanel, BorderLayout.CENTER);
+        jPanel1.revalidate();
+        final MSChrom cf = currentMSC;
+        final XYSeriesCollection specData = new XYSeriesCollection();
+        chartPanel.addChartMouseListener(new ChartMouseListener () {
+            @Override
+            public void chartMouseClicked(ChartMouseEvent cme) {
+                jPanel2.removeAll();
+                ChartEntity entity = cme.getEntity();
+                if (entity != null && entity instanceof XYItemEntity) {
+                    XYItemEntity ent = (XYItemEntity) entity;
+                    int iindex = ent.getItem();
+                    currentMS = cf.spectra[iindex];
+                    XYSeries spec;
+                    if (cf.SPECTRA_UNIFORM) spec = FormatChange.ArrayToXYSeries(cf.mz_values, currentMS.yvals);
+                    else spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
+                    specData.removeAllSeries();
+                    specData.addSeries(spec);
+                    JFreeChart chart2 = Utils.drawChart( specData, cf.spectra[iindex].msTitle, 
+                            "m/z", "intensity");
+                    ChartPanel chartPanel2 = new ChartPanel(chart2);
+                    chartPanel2.setMouseWheelEnabled(false);
+                    jPanel2.add(chartPanel2, BorderLayout.CENTER);
+                    jPanel2.revalidate();
+                    smoothed = false;
+                }
             }
-            
-            specData.addSeries(spec);
-            JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
-            ChartPanel cp = new ChartPanel(chart2);
-            cp.setMouseWheelEnabled(false);
-            jPanel2.add(cp, BorderLayout.CENTER);
-            jPanel2.revalidate();
-            chartPanel.addChartMouseListener(new ChartMouseListener () {
-                @Override
-                public void chartMouseClicked(ChartMouseEvent cme) {
-                    jPanel2.removeAll();
-                    ChartEntity entity = cme.getEntity();
-                    if (entity != null && entity instanceof XYItemEntity) {
-                        XYItemEntity ent = (XYItemEntity) entity;
-                        int iindex = ent.getItem();
-                        currentMS = cf.spectra[iindex];
-                        XYSeries spec;
-                        if (currentMS.msValues == null) {
-                            spec = FormatChange.ArrayToXYSeries(cf.mz_values, currentMS.yvals);
-                        } else {
-                            spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
-                        }
-                        specData.removeAllSeries();
-                        specData.addSeries(spec);
-                        JFreeChart chart2 = Utils.drawChart( specData, currentMS.msTitle, "m/z", "intensity" );
-                        ChartPanel chartPanel2 = new ChartPanel(chart2);
-                        chartPanel2.setMouseWheelEnabled(false);
-                        jPanel2.add(chartPanel2, BorderLayout.CENTER);
-                        jPanel2.revalidate();
-                        smoothed = false;
-                    }
-                }
-                @Override
-                public void chartMouseMoved(ChartMouseEvent cme) {
-                }
-            });
-        }
-    }
-       
+
+            @Override
+            public void chartMouseMoved(ChartMouseEvent cme) {
+            }
+        });
+    }  
     
+    ///@brief Open chromatogram for viewing
     private void openFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_openFileActionPerformed
         smoothed = false;
         fileChooser.setFileFilter(ExtensionFilter.msreadablefilter);
@@ -833,6 +757,7 @@ public class MSReader extends javax.swing.JFrame {
         System.exit(0);
     }//GEN-LAST:event_closeFrameActionPerformed
 
+    ///@brief Smooth current spectrum based on the user-specified smoothing type
     private void smoothSpectrumActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_smoothSpectrumActionPerformed
         if (currentMS == null) {
             Utils.showErrorMessage("No MS file loaded");
@@ -896,12 +821,14 @@ public class MSReader extends javax.swing.JFrame {
          
     }//GEN-LAST:event_smoothSpectrumActionPerformed
     
+    ///@brief Open options menu to set user options
     private void smoothingOptionsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_smoothingOptionsActionPerformed
         OptionsMenu so = new OptionsMenu(this, true);
         so.setLocationRelativeTo(this);
         so.setVisible(true);
     }//GEN-LAST:event_smoothingOptionsActionPerformed
 
+    ///@brief Reset the chromatogram to default view
     private void resetPanel2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_resetPanel2ActionPerformed
         if (currentMSC != null) {
             XYSeries series = (currentMSC.SPECTRA_UNIFORM) ? FormatChange.ArrayToXYSeries(currentMSC.mz_values, currentMS.yvals) 
@@ -1066,29 +993,14 @@ public class MSReader extends javax.swing.JFrame {
         }
         File[] files = fileChooser.getSelectedFiles();
         HDRun[] hdr = new HDRun[files.length];
-        Object temp;
         for (int i = 0; i < files.length; i++) {
-            try {
-                ObjectInputStream ois = new ObjectInputStream(new FileInputStream(files[i]));
-                temp = ois.readObject();
-                if (!(temp instanceof HDRun)) {
-                    Utils.showErrorMessage("Error: one or more files are invalid");
-                    return;
-                }
-                hdr[i] = (HDRun)temp;
-                ois.close();
-            } catch (IOException ex) {
-                Utils.showErrorMessage("Error: one or more files are invalid");
-            } catch (ClassNotFoundException e) {
-                Utils.showErrorMessage("Error: one or more files are invalid");
-            }
+            hdr[ i ] = Utils.readHDRun( files[ i ] );
         }
         if (hdr.length > 15) {
             Utils.showErrorMessage("Cannot overlay more than 15 HDX files at once");
             return;
         }
         HDX_Form HDX = new HDX_Form( hdr );
-//        HDX.altOverlay(hdr);
         HDX.setVisible(true);
     }//GEN-LAST:event_openHDXActionPerformed
     
@@ -1121,158 +1033,7 @@ public class MSReader extends javax.swing.JFrame {
         }
         
     }
-    private void exportSingleHDX (File f, File filepath) {
-        final LoadingDialog ld = new LoadingDialog(this, false);
-        ld.setLocationRelativeTo(this);
-        ld.setText("Exporting....");
-        ld.setVisible(true);
-        final File FILE = f;
-        final File path = filepath;
-        worker = new SwingWorker<Void, Void>() {
-            @Override
-            protected Void doInBackground() throws IOException, FileNotFoundException, ClassNotFoundException{
-                ObjectInputStream ois;
-                try {
-                    ois = new ObjectInputStream(new FileInputStream(FILE)); 
-                    HDRun hdr = (HDRun)ois.readObject();
-                    ois.close();
-                    if (path.exists()) {
-                        int opt = JOptionPane.showOptionDialog(null, (Object)path.toString() +" already exists. Overwrite?",
-                            "Overwrite file", JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, 
-                            null, new Object[] {"Yes", "No"}, (Object)"Yes");
-                        if (opt == 1) { return null; }
-                        path.delete();
-                    }
-                    try { 
-                        path.createNewFile(); 
-                    }
-                    catch (FileNotFoundException e) { 
-                       Utils.showMessage("Error: MSReader cannot access the file because it is being used by another process");
-                        return null;
-                    }
-                    FileOutputStream fos = new FileOutputStream(path);
-                    XSSFWorkbook workbook = new XSSFWorkbook();
-                    XSSFSheet worksheet = workbook.createSheet(".HDX conversion");
-                    int rowno = 0;
-                    XSSFRow rowA = worksheet.createRow(rowno);
-                    rowA.createCell(0).setCellValue(hdr.title);
-                    rowA.createCell(1).setCellValue("A: ");
-                    rowA.createCell(2).setCellValue(hdr.A);
-                    rowA.createCell(3).setCellValue("K: ");
-                    rowA.createCell(4).setCellValue(hdr.K);
-                    rowno++;
-                    XSSFRow rowB = worksheet.createRow(rowno);
-                    rowno++;
-                    XSSFRow rowC = worksheet.createRow(rowno);
-                    rowB.createCell(0).setCellValue("Time");
-                    rowC.createCell(0).setCellValue("D/res");
-                    for (int j = 1; j < hdr.getExchangeValues().length+1; j++) {
-                        rowB.createCell(j).setCellValue((Double)hdr.getExchangeValues()[j-1][0]);
-                        rowC.createCell(j).setCellValue((Double)hdr.getExchangeValues()[j-1][1]);
-                    }
-                    ois.close();
-                    workbook.write(fos);
-                    fos.flush();
-                    fos.close();
-                    return null;
-            } catch (IOException e) {
-                throw new IOException();
-            } catch (ClassNotFoundException c) {
-                throw new ClassNotFoundException();
-            }
-        }  
-           
-        @Override
-        protected void done () {
-            try { get();
-            } catch (InterruptedException ex) {Utils.showErrorMessage("Could not convert file");}
-            catch (ExecutionException e) { Utils.showErrorMessage("Could not convert file"); }
-            ld.dispose();
-        }}; 
-        
-        worker.execute(); 
-    }
-    
-    public void exportMultipleHDX(File[] f, File filepath) {
-        final File[] files = f;
-        final File path = filepath;
-        final LoadingDialog ld = new LoadingDialog(this, false);
-        ld.setLocationRelativeTo(this);
-        ld.setText("Exporting....");
-        ld.setVisible(true);
-        worker = new SwingWorker<Void, Void>() {
-            @Override
-            protected Void doInBackground()  throws IOException, FileNotFoundException, ClassNotFoundException {
-            HDRun[] hdr = new HDRun[files.length];
-            ObjectInputStream ois = null;
-            for (int i = 0; i < files.length; i++) {
-                try {
-                    FileInputStream fis = new FileInputStream(files[i]);
-                    ois = new ObjectInputStream(fis);
-                    hdr[i] = (HDRun)ois.readObject();
-                }
-                catch (IOException ex) {Utils.showErrorMessage("Error: one or more files are invalid");
-                    return null;} catch (ClassNotFoundException e) {
-                    Utils.showErrorMessage("Error: one or more files are invalid");
-                    return null;
-                }
-            }
-            if (ois!=null) ois.close(); 
-            if (path.exists()) {
-                int opt = JOptionPane.showOptionDialog(null, (Object)path.toString() +" already exists. Overwrite?",
-                    "Overwrite file", JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, 
-                    null, new Object[] {"Yes", "No"}, (Object)"Yes");
-                if (opt == 1) { return null; }
-                path.delete();
-            }
-            FileOutputStream fos;
-            try {
-                path.createNewFile();
-                fos = new FileOutputStream(path);
-            }
-            catch (FileNotFoundException e) { 
-               Utils.showMessage("Error: MSReader cannot access the file because it is being used by another process");
-                return null;
-            }
-            XSSFWorkbook workbook = new XSSFWorkbook(); 
-            XSSFSheet worksheet = workbook.createSheet(".HDX conversion");
-            int rowno = 0;
-            for (int i = 0; i < files.length; i++) {
-                XSSFRow rowA = worksheet.createRow(rowno);
-                rowA.createCell(0).setCellValue(hdr[i].title);
-                rowA.createCell(1).setCellValue("A: ");
-                rowA.createCell(2).setCellValue(hdr[i].A);
-                rowA.createCell(3).setCellValue("K: ");
-                rowA.createCell(4).setCellValue(hdr[i].K);
-                rowno++;
-                XSSFRow rowB = worksheet.createRow(rowno);
-                rowno++;
-                XSSFRow rowC = worksheet.createRow(rowno);
-                rowB.createCell(0).setCellValue("Time");
-                rowC.createCell(0).setCellValue("D/res");
-                for (int j = 1; j < hdr[i].getExchangeValues().length+1; j++) {
-                    rowB.createCell(j).setCellValue((Double)hdr[i].getExchangeValues()[j-1][0]);
-                    rowC.createCell(j).setCellValue((Double)hdr[i].getExchangeValues()[j-1][1]);
-                }
-                rowno+=2;
-            }
-            workbook.write(fos);
-            fos.flush();
-            fos.close();
-            return null;
-        }
-        @Override
-        protected void done() {
-            try { 
-                get(); 
-            } catch (InterruptedException ex) {Utils.showErrorMessage("Process was cancelled unexpectedly");} catch(ExecutionException e) { 
-                Utils.showErrorMessage("Process was cancelled unexpectedly");
-            }
-            ld.dispose();
-        } };
-        worker.execute();  
-    }
-                    
+                        
     private void exportHDXToExcelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exportHDXToExcelActionPerformed
         fileChooser.setCurrentDirectory(msreaderFiles);
         fileChooser.setFileFilter(ExtensionFilter.hdxfilter);
@@ -1300,13 +1061,9 @@ public class MSReader extends javax.swing.JFrame {
             }
             else return; 
             final File path = new File(savepath.toString() + ".tsv");
-            // TODO: test this - I don't think I should need two different 
-            // methods here but I'm not sure
-//            exportMultipleHDX( files, path );
-           
+
             exportHDX( files, path );
-//            if (files.length > 1) exportMultipleHDX(files, path);
-//            else exportSingleHDX(files[0], path);
+
         }
     }//GEN-LAST:event_exportHDXToExcelActionPerformed
 
@@ -1389,7 +1146,6 @@ public class MSReader extends javax.swing.JFrame {
     }//GEN-LAST:event_clearAllWindowsActionPerformed
 
     private void abortActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_abortActionPerformed
-        
         if (worker!=null) worker.cancel(true);
     }//GEN-LAST:event_abortActionPerformed
 
@@ -1401,12 +1157,11 @@ public class MSReader extends javax.swing.JFrame {
         performHDX( false );
     }//GEN-LAST:event_manualHDXActionPerformed
 
-    /* 
-    Performs semi-automatic HD exchange. User selects a folder full of 
-    data files for each time point, and each one is opened, extracted
-    for the peptide of interest, trimmed (if the boolean variable auto is
-    true), and combined to show a full HD exchange plot.  
-    */
+    
+    ///@brief Performs semi-automatic HD exchange. User selects a folder full of 
+    ///@brief data files for each time point, and each one is opened, extracted
+    ///@brief for the peptide of interest, trimmed (if the boolean variable auto is
+    ///@brief true), and combined to show a full HD exchange plot.  
     private void performHDX ( final boolean auto ) {
         AutoHDXSetup a = new AutoHDXSetup( this, true );
         a.setTitle ( (auto) ? 
@@ -1472,8 +1227,12 @@ public class MSReader extends javax.swing.JFrame {
                     for ( int ii = 0; ii < pept.length; ++ii ) {
                         //If zero time point change XIC parameters
                         if ( Utils.getDeutTimePoint(f.toString()) == 0) eic = currentMSC.getEIC(pept[ii].mz - 1, pept[ii].mz + 1);
-                        else eic = (pept[ii].mz > 1000) ? currentMSC.getEIC(pept[ii].mz - 1, pept[ii].mz + 5): 
-                                currentMSC.getEIC(pept[ii].mz - 1, pept[ii].mz + 2);
+                        // Set XIC parameters as a function of peptide size and total possible deuterons
+                        else {
+                            eic = currentMSC.getEIC( pept[ ii ].mz - 1, 
+                                    pept[ ii ].mz + pept[ ii ].maxDeuteration()*2/3 );
+                        }
+
                         elutionIndex = currentMSC.getElutionIndexFromEIC(eic, pept[ii].elutiontime);
                         
                         currentMS = currentMSC.spectra[ elutionIndex ];
@@ -1524,7 +1283,7 @@ public class MSReader extends javax.swing.JFrame {
                 refreshChromatogram();
                 ld.dispose();
                 resize();
-        }
+            }
         };
         ld.setLocationRelativeTo(this);
         ld.setVisible(true);
@@ -1541,16 +1300,15 @@ public class MSReader extends javax.swing.JFrame {
         cpn.setVisible(true);
         final Peptide pept = cpn.getPeptides()[0];
         if ( pept == null ) return;
-        double[][] eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
+        double[][] eic = currentMSC.getEIC(pept.mz - 1, pept.mz + 1);
         int elutionindex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
         currentMS = currentMSC.spectra[elutionindex];
-
         currentMS.convertToNonUniform( currentMSC );
         int windowSize = MSReader.getInstance().getIntProperty("windowSize");
         
         double[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
             
-        double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 6));
+        double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 4));
         
         // Normalize the isotopic distribution percentages
         double max = MSMath.getMax ( dataRange[ 1 ] ); 
@@ -1570,7 +1328,8 @@ public class MSReader extends javax.swing.JFrame {
         XYSeriesCollection dataset = new XYSeriesCollection();
         dataset.addSeries( dataSeries );
         dataset.addSeries( isotopeSeries );
-        JFreeChart chart = Utils.drawChart( dataset, pept.displaySequence, 
+        JFreeChart chart = Utils.drawChart( dataset, pept.displaySequence +
+                " ("+String.format("%.2f",currentMS.getRetentionTime())+" RT)",
                 "m/z","intensity" );
         
         Peak_Zoom pz = new Peak_Zoom();
@@ -1604,54 +1363,32 @@ public class MSReader extends javax.swing.JFrame {
             return;
         }
         
-        if (HDXinput) {
-            final HDRun[][] sender;
-            
+        if (HDXinput) {            
             // If this is a protection map, need to load two sets of HDX files
             if ( protection ) {
                 HDRun[] free = loadHDXFiles( "Choose HDX files for free state" );
                 if ( free.length == 0 ) return;
                 HDRun[] bound = loadHDXFiles( "Choose HDX files for bound state" );
                 if ( bound.length == 0 ) return;
-                
-                sender = new HDRun[2][];
-                sender[0] = free;
-                sender[1] = bound;
+
+                ProtectionMap.createExchangeLines(free, bound, outputpath, seq);
                 
             } else {
                 HDRun[] hdrs = loadHDXFiles( "Choose HDX files for heat map" );
                 if ( hdrs.length == 0 ) return;
-                
-                sender = new HDRun[1][];
-                sender[0] = hdrs;
+                ProtectionMap.createExchangeLines(hdrs, outputpath, seq);
             }
-            
-            final LoadingDialog ld = new LoadingDialog(this, false);
-            ld.setText("Generating heat map...");
-            ld.setLocationRelativeTo(this);
-            ld.setVisible(true);
-            worker = new SwingWorker<Void, Void>() {
-                @Override
-                protected Void doInBackground () {
-                    ProtectionMap.createProtectionMap(sender, outputpath, seq);
-                    return null;
-                }
-                
-                @Override
-                public void done() {
-                    try {
-                        ld.dispose();
-                        get();
-                    } catch (InterruptedException ex) { 
-                        Utils.logException(bin, ex, "swing worker interrupted");
-                    } catch(ExecutionException i) {
-                        Utils.logException(bin, i, "swing worker interrupted");
-                    }
-                }
-            };
-            worker.execute();
         } 
     }//GEN-LAST:event_generateHeatMapActionPerformed
+
+    private void calcSignificanceActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_calcSignificanceActionPerformed
+        HDRun[] free = loadHDXFiles( "Choose HDX files for free state" );
+        if ( free.length == 0 ) return;
+        HDRun[] bound = loadHDXFiles( "Choose HDX files for bound state" );
+        if ( bound.length == 0 ) return;
+
+        ProtectionMap.calculateSignificance( free, bound );
+    }//GEN-LAST:event_calcSignificanceActionPerformed
 
     private HDRun[] loadHDXFiles ( String dialogTitle ) {
         fileChooser.setMultiSelectionEnabled(true);
@@ -1666,16 +1403,7 @@ public class MSReader extends javax.swing.JFrame {
 
         HDRun[] hdruns = new HDRun[filegroup.length];
         for (int i = 0; i < filegroup.length; i++) {
-            ObjectInputStream in;
-            try {
-                in = new ObjectInputStream(new FileInputStream(filegroup[i]));
-                HDRun hdx = (HDRun)in.readObject();
-                hdruns[i] = hdx;
-            } catch (IOException ex) {Utils.showErrorMessage ("Unable to load HDX files");
-                Utils.logException (bin, ex, "Couldn't load HDX");} catch(ClassNotFoundException e) {
-                Utils.showErrorMessage ("Unable to load HDX files");
-                Utils.logException (bin, e, "Couldn't load HDX");
-            }
+            hdruns[ i ] = Utils.readHDRun( filegroup[i] );
         }
         return hdruns;
     }
@@ -1765,6 +1493,7 @@ public class MSReader extends javax.swing.JFrame {
     private javax.swing.JMenuItem abort;
     private javax.swing.JMenuItem addSpectrum;
     private javax.swing.JMenuItem autoHDX;
+    private javax.swing.JMenuItem calcSignificance;
     private javax.swing.JMenuItem checkPeptideAccuracy;
     private javax.swing.JMenuItem chromOptions;
     private javax.swing.JMenuItem clearAllWindows;

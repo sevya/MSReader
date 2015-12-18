@@ -22,17 +22,19 @@ public class HDExchangeTimePoint {
     private double centroid_;
     private final double timePoint_;
     private double retentionTime_;
-    private HDExchange parent;
+    private final HDExchange parent;
+    private final int idNumber_;
     
     public HDExchangeTimePoint ( //Exchange_Popup window, 
-            HDExchange par, double[][] range, double timePoint, double retentionTime ) {
+            HDExchange par, double[][] range, double timePoint, double retentionTime, int id_number ) {
         parent = par;
         dataRange_ = range;
         timePoint_ = timePoint;
         retentionTime_ = retentionTime;
         // Have to calculate centroid before creating ExchangePopup window
-        // That way when it reaches up to get the values they're precalculate
+        // That way when it reaches up to get the values they're precalculated
         calculateValues();
+        idNumber_ = id_number;
         window_ = new Exchange_Popup( this ); 
     }
     
@@ -48,6 +50,8 @@ public class HDExchangeTimePoint {
     public double getCentroid () { return centroid_; }
     
     public double getTimePoint () { return timePoint_; } 
+    
+    public Integer getIDNumber () { return idNumber_; }
     
     private void backUpData () { 
         tempData_ = new double [ 2 ][];
@@ -92,7 +96,7 @@ public class HDExchangeTimePoint {
     
     public double getRetentionTime () { return retentionTime_; }
     
-     public void trim () {
+    public void trim () {
         backUpData();
         try {
             int[] indices = peakDetector();
@@ -106,7 +110,12 @@ public class HDExchangeTimePoint {
         }
     }
     
-     private int[] peakDetector () throws NoPeakDetectedException {
+    // Removes this time point from HD exchange instance
+    public void removeTimePoint() {
+        parent.removeTimePoint( idNumber_ );
+    }
+    
+    private int[] peakDetector () throws NoPeakDetectedException {
          // TODO figure out how this is detecting peaks and document it a little
         double[][] tope = parent.getPeptide()
                 .getThreadedDistribution( (int)Math.pow(10, 5) );

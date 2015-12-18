@@ -1,6 +1,7 @@
 package mass.spec;
 
 import java.io.File;
+import java.security.InvalidParameterException;
 import java.util.Collections;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -280,6 +281,7 @@ public class ProtectionMapOptions extends javax.swing.JDialog {
     public String getSequence() {
         String str;
         if ( sequenceInput.getText().equals("") ) { // Default to string entry - if none pull from PDB
+            if ( pdbInput.getText().equals("") ) return "";
             str = getSequenceFromPDB( pdbInput.getText() );
         } else {
             str = sequenceInput.getText();

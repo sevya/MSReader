@@ -8,6 +8,7 @@ import javax.swing.table.DefaultTableModel;
 import org.jfree.data.xy.XYSeries;
 import java.io.Serializable;
 import java.text.DecimalFormat;
+import java.util.List;
 
 /*
 This class holds information for the overall HD exchange experiment. This 
@@ -38,6 +39,7 @@ public class HDExchange implements Serializable {
             timePoint.trim();
         }
     }
+    
     public ArrayList<String> getExchangeSpectraTitles () {
         ArrayList<String> temp = new ArrayList();
         for ( MassSpectrum spec : exchangeSpectra ) {
@@ -59,6 +61,16 @@ public class HDExchange implements Serializable {
         }
     }
     
+    public void removeTimePoint ( Integer idNumber ) {
+        for ( int i = 0; i < exchangePoints.size(); ++i ) { 
+            if ( exchangePoints.get(i).getIDNumber().equals( idNumber ) ) { 
+                exchangePoints.remove( i );
+                break;
+            }
+        }
+        updateSummary();
+    }
+    
     public void removeAllSpectra () {
         exchangeSpectra.clear();
     }
@@ -73,7 +85,7 @@ public class HDExchange implements Serializable {
     
     public boolean hasZeroTimePoint () {
         for ( HDExchangeTimePoint sample : exchangePoints ) { 
-            if ( sample.getTimePoint() == 0 )  return true;
+            if ( Math.abs(sample.getTimePoint() - 0) < Math.pow( 10, -4) ) return true;
         }
         return false;
     }
@@ -92,14 +104,30 @@ public class HDExchange implements Serializable {
         for ( int i = 0; i < exchangePoints.size(); ++i ) {
             summaryData[ 0 ][ i ] = exchangePoints.get( i ).getTimePoint();
             if ( hasZeroTimePoint() ) {
+                Double avgCentroidZero = getAvgCentroidAtTime( 0.0 );
                 summaryData[ 1 ][ i ] = 
-                        exchangePoints.get( i ).getCentroid() - 
-                        exchangePoints.get( 0 ).getCentroid();
+                        100*( exchangePoints.get( i ).getCentroid() - 
+                        avgCentroidZero ) /
+                        peptide.maxDeuteration();
             } else {
                 summaryData[ 1 ][ i ] = exchangePoints.get( i ).getCentroid();
             }
         }
         return summaryData;
+    }
+    
+    public Double getAvgCentroidAtTime( Double timePoint ) {
+        double[][] centroidValues = getCentroidData();
+        Double avgValue = 0.0;
+        int count = 0;
+        for ( int ii = 0; ii < centroidValues[0].length; ++ii ) {
+            if ( Math.abs((Double)centroidValues[0][ii] - timePoint) < Math.pow(10, -4) ) {
+                avgValue += (Double)centroidValues[1][ii];
+                count++;
+            }
+        }
+        avgValue /= count;
+        return avgValue;
     }
     
     public double[][] getSummaryData () {
@@ -126,8 +154,21 @@ public class HDExchange implements Serializable {
         );
     }
     
+    public DefaultTableModel getPercentDataAsTable () {
+        DecimalFormat time_format = new DecimalFormat("###.#");
+        DecimalFormat centroid_format = new DecimalFormat("###.##");
+        return new DefaultTableModel( 
+                FormatChange.ArrayToTable( getPercentData(), time_format, centroid_format ), 
+                new String[] {"time(min)", "centroid"} 
+        );
+    }
+    
     public XYSeries getSummaryDataAsXYSeries () {
         return FormatChange.ArrayToXYSeries( getSummaryData() );
+    }
+    
+    public XYSeries getPercentDataAsXYSeries () {
+        return FormatChange.ArrayToXYSeries( getPercentData() );
     }
     
     // Analyzes the loaded spectra to populate HDExchangeTimePoint objects
@@ -144,7 +185,10 @@ public class HDExchange implements Serializable {
             }
         });
         exchangePoints = new ArrayList();
-        for ( MassSpectrum scan : exchangeSpectra ) {
+        List<Integer> randomIDs = Utils.uniqueRandom( exchangeSpectra.size() );
+        for ( int ii = 0; ii < exchangeSpectra.size(); ++ii ) {
+//        for ( MassSpectrum scan : exchangeSpectra ) {
+            MassSpectrum scan = exchangeSpectra.get( ii );
             // TODO if peakIndex is -1 this means the spectrum has no X values - 
             // find a way to handle this correctly
             // if it is greater than the length of the array, find a way to handle it
@@ -164,7 +208,8 @@ public class HDExchange implements Serializable {
             }
 
             HDExchangeTimePoint timePoint = new HDExchangeTimePoint( this, dataRange, 
-                Utils.getDeutTimePoint( scan.getRunTitle() ), scan.getRetentionTime()  
+                Utils.getDeutTimePoint( scan.getRunTitle() ), scan.getRetentionTime(),  
+                randomIDs.get( ii )
             );
 
             exchangePoints.add( timePoint );

@@ -69,6 +69,7 @@ public class Exchange_Popup extends javax.swing.JFrame {
         trim = new javax.swing.JButton();
         jLabel2 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
+        removeTimePoint = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setResizable(false);
@@ -115,6 +116,13 @@ public class Exchange_Popup extends javax.swing.JFrame {
             }
         });
 
+        removeTimePoint.setText("Remove time point");
+        removeTimePoint.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                removeTimePointActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -142,6 +150,10 @@ public class Exchange_Popup extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(trim)))
                 .addContainerGap())
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(removeTimePoint)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -160,7 +172,8 @@ public class Exchange_Popup extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jButton1)
                     .addComponent(trim))
-                .addGap(34, 34, 34))
+                .addGap(5, 5, 5)
+                .addComponent(removeTimePoint))
         );
 
         pack();
@@ -188,6 +201,12 @@ public class Exchange_Popup extends javax.swing.JFrame {
         centroid.setText( format_.format( parent.getCentroid() ) );
         updateAll();
     }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void removeTimePointActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeTimePointActionPerformed
+        // TODO write code to remove this time point
+        parent.removeTimePoint();
+        this.dispose();
+    }//GEN-LAST:event_removeTimePointActionPerformed
     
     public void setError(String str) {
         jLabel2.setText(str);
@@ -204,6 +223,7 @@ public class Exchange_Popup extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
+    private javax.swing.JButton removeTimePoint;
     private javax.swing.JButton trim;
     // End of variables declaration//GEN-END:variables
 }

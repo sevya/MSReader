@@ -1,10 +1,13 @@
 package mass.spec;
 
-import java.awt.BorderLayout;
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.PrintWriter;
 import java.security.InvalidParameterException;
 import java.text.DateFormat;
@@ -14,13 +17,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
+import java.util.Random;
+import java.util.Set;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.table.DefaultTableModel;
-import org.apache.commons.lang.ArrayUtils;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
@@ -28,6 +30,31 @@ import org.jfree.data.xy.XYSeriesCollection;
 
 
 public class Utils {
+    
+    static final HashMap<String, Double> aminoacids = new HashMap<String, Double>() {
+    {
+        put( "I", 131.1736 );
+        put( "L", 131.1736 );
+        put( "K", 146.1882 );
+        put( "M", 149.2124 );
+        put( "T", 119.1197 );
+        put( "W", 204.2262 );
+        put( "V", 117.1469 );
+        put( "R", 174.2017 );
+        put( "H", 155.1552 );
+        put( "F", 165.19 );
+        put( "A", 89.0935 );
+        put( "N", 132.1184 );
+        put( "D", 133.1032 );
+        put( "C", 121.159 );
+        put( "E", 147.1299 );
+        put( "Q", 146.1451 );
+        put( "G", 75.0669 );
+        put( "P", 115.131 );
+        put( "S", 105.093 );
+        put( "Y", 181.1894 );
+    }
+};
     
     public static String osjoin (String one, String two) {
         return one + File.separator + two;
@@ -79,6 +106,10 @@ public class Utils {
         JOptionPane.showMessageDialog(null, str, "Error", JOptionPane.ERROR_MESSAGE);
     }
     
+    public static void showWarningMessage (String str) {
+        JOptionPane.showMessageDialog(null, str, "Warning", JOptionPane.WARNING_MESSAGE);
+    }
+    
     public static void showMessage (String str) {
         JOptionPane.showMessageDialog (null, str);
     }
@@ -89,6 +120,26 @@ public class Utils {
     
     public static void logException ( Exception e) {
         logException ( MSReader.getInstance().bin, e, null);
+    }
+    
+    public static HDRun readHDRun ( File file ) {
+        HDRun hdr = null;
+        Object temp;
+        try {
+            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+            temp = ois.readObject();
+            if (!(temp instanceof HDRun)) {
+                Utils.showErrorMessage("Error: one or more files are invalid");
+                return null;
+            }
+            hdr = (HDRun)temp;
+            ois.close();
+        } catch (IOException ex) {
+            Utils.showErrorMessage("Error: one or more files are invalid");
+        } catch (ClassNotFoundException e) {
+            Utils.showErrorMessage("Error: one or more files are invalid");
+        }
+        return hdr;
     }
     
     // binary search of an array that returns the insertion point of the target
@@ -116,30 +167,30 @@ public class Utils {
         }
         return minIndex;
     }
+    
+    public static List<Integer> uniqueRandom( int size ) {
+        final Random random = new Random();
+        List<Integer> randomNums = new ArrayList<Integer>();
+        for ( int i = 0; i < size; ++i ) {
+            Integer randomNum = random.nextInt();
+            while ( randomNums.contains( randomNum ) ) randomNum = random.nextInt();
+            randomNums.add( random.nextInt() );
+        }
+        return randomNums;
+    }
         
     public static String trimPeptide (String str) {
         str = str.trim();
-        // Temporarily commented out since it interferes with the way I want to
-        // read in modifications - TODO find a more sustainable way to do this
-//        int spot = str.indexOf(".");
-//        if (spot != -1 && spot != 1 && spot != str.length()-2 ) str = str.substring(spot+1, str.length());
-//        spot = str.indexOf(".");
-//        if (spot != -1 && spot != 1 && spot != str.length()-2 ) str = str.substring(0, spot);
+
+        // Check if the second and second to last characters are something 
+        // denoting a break in the peptide - this is common output from 
+        // peptide ID software
         
-        int spot = str.indexOf("-");
-        if (spot != -1) str = str.substring(spot+1, str.length());
-        spot = str.indexOf("-");
-        if (spot != -1) str = str.substring(0, spot);
-        
-        spot = str.indexOf("_");
-        if (spot != -1) str = str.substring(spot+1, str.length());
-        spot = str.indexOf("_");
-        if (spot != -1) str = str.substring(0, spot);
-        
-        spot = str.indexOf("|");
-        if (spot != -1) str = str.substring(spot+1, str.length());
-        spot = str.indexOf("|");
-        if (spot != -1) str = str.substring(0, spot);
+        Set<String> aas = aminoacids.keySet();
+        if ( !aas.contains( str.substring(1, 2) ) && 
+        !aas.contains( str.substring(str.length()-2, str.length()-1) ) ) {
+            str = str.substring( 2, str.length()-2 );
+        }
 
         return str;
     }
@@ -187,27 +238,7 @@ public class Utils {
         
     public static double getValueOf (String amino) {
         amino = amino.toUpperCase();
-        if ( "I".equals( amino ) ) return 131.1736;
-        else if ( "L".equals( amino ) ) return 131.1736;
-        else if ( "K".equals( amino ) ) return 146.1882;
-        else if ( "M".equals( amino ) ) return 149.2124;
-        else if ( "T".equals( amino ) ) return 119.1197;
-        else if ( "W".equals( amino ) ) return 204.2262;
-        else if ( "V".equals( amino ) ) return 117.1469;
-        else if ( "R".equals( amino ) ) return 174.2017;
-        else if ( "H".equals( amino ) ) return 155.1552;
-        else if ( "F".equals( amino ) ) return 165.19;
-        else if ( "A".equals( amino ) ) return 89.0935;
-        else if ( "N".equals( amino ) ) return 132.1184;
-        else if ( "D".equals( amino ) ) return 133.1032;
-        else if ( "C".equals( amino ) ) return 121.159;
-        else if ( "E".equals( amino ) ) return 147.1299;
-        else if ( "Q".equals( amino ) ) return 146.1451;
-        else if ( "G".equals( amino ) ) return 75.0669;
-        else if ( "P".equals( amino ) ) return 115.131;
-        else if ( "S".equals( amino ) ) return 105.093;
-        else if ( "Y".equals( amino ) ) return 181.1894;
-        else return 0;
+        return aminoacids.get( amino );
     }
     
     public static String[] trypsindigest (String str, int missed) {
@@ -383,11 +414,50 @@ public class Utils {
         return difference;
     }
     
-    public static void main (String[] args)
-    {
-        Peptide pept = new Peptide("E.ASLGVSSACPYQGKSSF.F", 
-               2, 12.01);
-        System.out.println(pept.sequence);
-        System.out.println(pept.displaySequence);
+ private static List<Peptide> peptideListFromTxt( File filename ) {
+        List<Peptide> peptArray = new ArrayList<Peptide>();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(filename));
+            try {
+                String str;
+                while ( (str=br.readLine()) != null ) {
+                    String[] tiago = str.split("\t|,");
+                    // if empty line
+                    if ( tiago.length == 0 ) {
+                        continue;
+                    }
+                    if (tiago.length == 4) {
+                        try {
+                            Peptide pept = new Peptide (tiago[0],
+                                    Integer.parseInt(tiago[2]), 
+                                    Double.parseDouble(tiago[3]));
+                            peptArray.add( pept );
+                        } catch ( Exception e ) {
+                            e.printStackTrace();
+                            throw new NumberFormatException();
+                        }
+                    } else {
+                        System.out.println("token count: "+tiago.length);
+                        throw new NumberFormatException();
+                    }
+                } 
+            } finally {
+                br.close(); 
+            }
+            
+        } catch (NumberFormatException io) {
+            io.printStackTrace();
+            Utils.showErrorMessage("Error: text file is not in correct format");
+            Utils.logException( io );
+        } catch (IOException n) {
+            Utils.showErrorMessage("Error: could not read file");
+            Utils.logException( n );
+        }
+        return peptArray;
+    }
+ 
+    public static void main ( String [] argv ) {
+        List<Peptide> peptides = peptideListFromTxt( 
+                new File("/Users/alexsevy/Documents/MSReader files/14N4 apo/14N4_peptides.txt") );
     }
 }

@@ -78,7 +78,22 @@ public class Peptide implements Serializable {
         for (int i = 0; i < sequence.length(); ++i) {
             prolines += ( sequence.toUpperCase().charAt(i) == 'P' ? 1 : 0 );
         }
-        return (sequence.length() - prolines - 1)/(double)charge;
+        return (this.aaLength() - prolines - 1)/(double)charge;
+    }
+    
+    public String sequenceNoModification() {
+        String seqNoMod = "";
+        for ( int i = 0; i < sequence.length(); ++i ) {
+            // if aa is valid amino acid
+            if (Utils.aminoacids.get(sequence.substring(i, i+1)) != null) {
+                seqNoMod += sequence.substring(i, i+1);
+            }
+        }
+        return seqNoMod;
+    }
+    
+    public int aaLength() {
+        return sequenceNoModification().length();
     }
     
     private int[] getElement (String aa) {

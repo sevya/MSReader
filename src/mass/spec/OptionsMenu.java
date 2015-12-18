@@ -333,7 +333,7 @@ public class OptionsMenu extends javax.swing.JDialog {
                 return;
             }
             msr.setProperty("filter", input);
-            msr.setProperty("smoothType", ""+MSReader.SMOOTH_MOVING_AVG);
+            msr.setProperty("smoothType", ""+MSReader.smooth.SMOOTH_MOVING_AVG);
         } else if (jRadioButton2.isSelected()) {
             String input1 = filterSG.getText();
             String input2 = degreeSG.getText();

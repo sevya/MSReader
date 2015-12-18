@@ -10,14 +10,14 @@ public class Chromatogram_Options extends javax.swing.JDialog {
         super(parent, modal);
         msr = (MSReader)parent;
         initComponents();
-        switch (msr.chromatogramType) {
-            case 0:
+        switch ( msr.chromatogramType ) {
+            case CHROM_TYPE_TIC:
                 TIC.setSelected(true);
                 break;
-            case 1: 
+            case CHROM_TYPE_BPC: 
                 BPC.setSelected(true);
                 break;
-            case 2:
+            case CHROM_TYPE_EIC:
                 XIC.setSelected(true);
                 jTextField1.setEditable(true);
                 jTextField2.setEditable(true);
@@ -167,13 +167,13 @@ public class Chromatogram_Options extends javax.swing.JDialog {
 
     private void okActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_okActionPerformed
         if (TIC.isSelected()) {
-            msr.chromatogramType = MSReader.CHROM_TYPE_TIC;
+            msr.chromatogramType = MSReader.chromType.CHROM_TYPE_TIC;
         }
         else if (BPC.isSelected()) {
-            msr.chromatogramType = MSReader.CHROM_TYPE_BPC;
+            msr.chromatogramType = MSReader.chromType.CHROM_TYPE_BPC;
         }
         else if (XIC.isSelected()) {
-            msr.chromatogramType = MSReader.CHROM_TYPE_EIC;
+            msr.chromatogramType = MSReader.chromType.CHROM_TYPE_EIC;
             double [] x = getXICRange();
             if (x == null || x[1] < x[0]) {
                 Utils.showErrorMessage("Not a valid input");
@@ -193,6 +193,8 @@ public class Chromatogram_Options extends javax.swing.JDialog {
         }
         try {
             values[1] = Double.parseDouble(jTextField2.getText());
+        // If no values are entered for mass range, automatically choose
+        // TODO specify specific expection here
         } catch (Exception e) {
             values[0] -= 1;
             values[1] = values[0] + 1;

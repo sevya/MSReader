@@ -19,6 +19,16 @@ public class MSMath {
         return getMax (data, 0, data.length);
     }
     
+    public static Double getMax (Object[] data) {
+        Double max = Double.MIN_VALUE;
+        for ( int i = 0; i < data.length; ++i ) {
+            if ( (Double)data[i] > max ) {
+                max = (Double)data[i];
+            }
+        }
+        return max;
+    }
+    
     public static int getMaxIndex (double[] data) {
         return getMaxIndex (data, 0, data.length);
     }

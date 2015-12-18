@@ -33,6 +33,14 @@ public class FormatChange {
         for (int i = 0; i < array.length; i++) array[i] = Double.parseDouble(form.format(array[i]));
     }
     
+    public static Double[] ObjectArraytoDouble ( Object[] array ) {
+        Double[] doubArray = new  Double[array.length];
+        for ( int i = 0; i < array.length; ++i ) {
+            doubArray[i] = (Double)array[i];
+        }
+        return doubArray;
+    }
+    
     public static Object[][] ArrayToTable (double [][] array) {
         Object[][] table = new Object [array[0].length][array.length];
         for (int i = 0; i < array[0].length; i++) {

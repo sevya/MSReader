@@ -131,20 +131,23 @@ public class AutoHDXSetup extends javax.swing.JDialog {
     }
     
     private void addActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addActionPerformed
-//        String[] fs = {".CDF", ".cdf"};
-//        FileFilter cdf = new ExtensionFilter("netCDF file", fs);
         fileChooser.setFileFilter(ExtensionFilter.msreadablefilter);
-        
-//        fileChooser.addChoosableFileFilter(cdf);
-//        fileChooser.setFileFilter(cdf);
         fileChooser.setVisible(true);
-        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        fileChooser.setMultiSelectionEnabled( true );
         int returnVal = fileChooser.showOpenDialog(this);
         ArrayList<String> cdffiles = new ArrayList(0);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
-            walk(fileChooser.getSelectedFile().toString(), cdffiles);
-            for ( String cdfFile : cdffiles ) {
-                model.add( model.size(), new File( cdfFile ) );
+            File[] chosen = fileChooser.getSelectedFiles();
+            for ( File f : chosen ){
+                if ( f.isFile() ) {
+                    model.add( model.size(), f );
+                } else {
+                    walk( f.toString(), cdffiles );
+                    for ( String cdfFile : cdffiles ) {
+                        model.add( model.size(), new File( cdfFile ) );
+                    }
+                }
             }
             jList1.setModel(model);
         }

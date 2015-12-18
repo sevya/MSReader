@@ -440,9 +440,9 @@ public class ViewPeptides extends javax.swing.JDialog {
             return;
         }
         int index = jTable1.getSelectedRow();
-        msr.chromatogramType = MSReader.CHROM_TYPE_EIC;
+        msr.chromatogramType = MSReader.chromType.CHROM_TYPE_EIC;
         Peptide temp = msr.getPeptides().elementAt(index);
-        msr.XICrange = new double [] {temp.mz - 2, temp.mz + 2};
+        msr.XICrange = new double [] {temp.mz - 1, temp.mz + 1};
         msr.refreshChromatogram();
         dispose();
     }//GEN-LAST:event_extractActionPerformed
@@ -454,20 +454,33 @@ public class ViewPeptides extends javax.swing.JDialog {
         int returnVal = fc.showOpenDialog(this);
         if ( returnVal != JFileChooser.APPROVE_OPTION ) return;
         File f = fc.getSelectedFile();
+        List<Peptide> peptides = peptideListFromTxt( f );
+        for ( Peptide pept: peptides ) { 
+            msr.getPeptides().addPeptide( pept );
+        }
+        
+        saved = false;
+        refresh();
+    }//GEN-LAST:event_addFromTxtActionPerformed
+
+    private List<Peptide> peptideListFromTxt( File filename ) {
+        List<Peptide> peptArray = new ArrayList<Peptide>();
         try {
-            BufferedReader br = new BufferedReader(new FileReader(f));
+            BufferedReader br = new BufferedReader(new FileReader(filename));
             try {
                 String str;
                 while ( (str=br.readLine()) != null ) {
                     String[] tiago = str.split("\t|,");
-                    for (String s : tiago) {
-                        System.out.println(s);
+                    // if empty line
+                    if ( tiago.length == 0 ) {
+                        continue;
                     }
                     if (tiago.length == 4) {
                         try {
-                            msr.getPeptides().addPeptide (new Peptide (tiago[0],
+                            Peptide pept = new Peptide (tiago[0],
                                     Integer.parseInt(tiago[2]), 
-                                    Double.parseDouble(tiago[3])));
+                                    Double.parseDouble(tiago[3]));
+                            peptArray.add( pept );
                         } catch ( Exception e ) {
                             e.printStackTrace();
                             throw new NumberFormatException();
@@ -489,10 +502,10 @@ public class ViewPeptides extends javax.swing.JDialog {
             Utils.showErrorMessage("Error: could not read file");
             Utils.logException( n );
         }
-        saved = false;
-        refresh();
-    }//GEN-LAST:event_addFromTxtActionPerformed
-
+        return peptArray;
+    }
+ 
+    
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         if (msr.currentMS == null) {
              Utils.showErrorMessage("Error: no spectrum loaded");
@@ -503,7 +516,7 @@ public class ViewPeptides extends javax.swing.JDialog {
             return;
         }
         int index = jTable1.getSelectedRow();
-        msr.chromatogramType = MSReader.CHROM_TYPE_EIC;
+        msr.chromatogramType = MSReader.chromType.CHROM_TYPE_EIC;
         Peptide pept = msr.getPeptides().elementAt(index);
         MSChrom currentMSC = MSReader.getInstance().currentMSC;
         double[][] eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
@@ -515,7 +528,7 @@ public class ViewPeptides extends javax.swing.JDialog {
         
         double[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
             
-        double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 6));
+        double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 5));
         
         // Normalize the isotopic distribution percentages
         double max = MSMath.getMax ( dataRange[ 1 ] ); 
@@ -535,7 +548,8 @@ public class ViewPeptides extends javax.swing.JDialog {
         XYSeriesCollection dataset = new XYSeriesCollection();
         dataset.addSeries( dataSeries );
         dataset.addSeries( isotopeSeries );
-        JFreeChart chart = Utils.drawChart( dataset, pept.displaySequence, 
+        JFreeChart chart = Utils.drawChart( dataset, pept.displaySequence +
+                " ("+String.format("%.2f",currentMS.getRetentionTime())+" RT)",
                 "m/z","intensity" );
         
         Peak_Zoom pz = new Peak_Zoom();
@@ -545,46 +559,6 @@ public class ViewPeptides extends javax.swing.JDialog {
         pz.setVisible(true);
         dispose();
     }//GEN-LAST:event_jButton1ActionPerformed
-
-    private ArrayList<Peptide> importPeptides ( String filename ) {
-        ArrayList<Peptide> peptides = new ArrayList();
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(filename));
-            try {
-                String str;
-                while ( (str=br.readLine()) != null ) {
-                    String[] tiago = str.split("\t|,");
-                    for (String s : tiago) {
-                        System.out.println(s);
-                    }
-                    if (tiago.length == 4) {
-                        try {
-                            peptides.add( new Peptide (tiago[0],
-                                    Integer.parseInt(tiago[2]), 
-                                    Double.parseDouble(tiago[3])) );
-                        } catch ( Exception e ) {
-                            e.printStackTrace();
-                            throw new NumberFormatException();
-                        }
-                    } else {
-                        System.out.println("token count: "+tiago.length);
-                        throw new NumberFormatException();
-                    }
-                } 
-            } finally {
-                br.close(); 
-            }
-
-        } catch (NumberFormatException io) {
-            io.printStackTrace();
-            Utils.showErrorMessage("Error: text file is not in correct format");
-            Utils.logException( io );
-        } catch (IOException n) {
-            Utils.showErrorMessage("Error: could not read file");
-            Utils.logException( n );
-        }
-        return peptides;
-    }
     
     private void refresh() {
         DefaultTableModel d = FormatChange.PeptidesToDTM( msr.getPeptides() );
@@ -610,6 +584,5 @@ public class ViewPeptides extends javax.swing.JDialog {
     private javax.swing.JMenuItem saveAS;
     private javax.swing.JMenuItem setDefault;
     // End of variables declaration//GEN-END:variables
-
 
 }
