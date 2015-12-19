@@ -7,13 +7,12 @@ import org.jfree.data.xy.*;
 
 public class Exchange_Popup extends javax.swing.JFrame {
     final HDExchangeTimePoint parent;
-    DecimalFormat format_ = new DecimalFormat ("####.###");
     
     public Exchange_Popup ( HDExchangeTimePoint par ) {
         super ("HD Exchange");
         initComponents();
         parent = par;
-        centroid.setText( format_.format( parent.getCentroid() ) );
+        centroid.setText( parent.getCentroidString() );
         updateAll();
     }
 
@@ -185,20 +184,20 @@ public class Exchange_Popup extends javax.swing.JFrame {
         
         parent.deleteRows( start, len );
         
-        centroid.setText( format_.format( parent.getCentroid() ) );
+        centroid.setText( parent.getCentroidString() );
         updateAll();
     }//GEN-LAST:event_deleteActionPerformed
 
     
     private void trimActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_trimActionPerformed
         parent.trim();
-        centroid.setText( format_.format( parent.getCentroid() ) );
+        centroid.setText( parent.getCentroidString() );
         updateAll();
     }//GEN-LAST:event_trimActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         parent.undoDelete();
-        centroid.setText( format_.format( parent.getCentroid() ) );
+        centroid.setText( parent.getCentroidString() );
         updateAll();
     }//GEN-LAST:event_jButton1ActionPerformed
 

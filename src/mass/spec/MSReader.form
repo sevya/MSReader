@@ -114,7 +114,7 @@
           <SubComponents>
             <MenuItem class="javax.swing.JMenuItem" name="viewHDExchangeMenu">
               <Properties>
-                <Property name="text" type="java.lang.String" value="View HD Exchange"/>
+                <Property name="text" type="java.lang.String" value="Launch HD Exchange"/>
               </Properties>
               <Events>
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="viewHDExchangeMenuActionPerformed"/>
@@ -206,6 +206,14 @@
               </Properties>
               <Events>
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="generateHeatMapActionPerformed"/>
+              </Events>
+            </MenuItem>
+            <MenuItem class="javax.swing.JMenuItem" name="structuralHeatMap">
+              <Properties>
+                <Property name="text" type="java.lang.String" value="Make structural heat map"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="structuralHeatMapActionPerformed"/>
               </Events>
             </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="calcSignificance">

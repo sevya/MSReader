@@ -21,13 +21,6 @@ public class FormatChange {
         }
         return table;
     }
-
-    public static DecimalFormat getFormat (double step) {
-        if (step >= 1) return new DecimalFormat("####");
-        else if (step >= .1) return new DecimalFormat("####.#");
-        else if (step >= .01) return new DecimalFormat("####.##");
-        else return new DecimalFormat("####.###");
-    }
     
     public static void FormatArray (double[] array, DecimalFormat form) {
         for (int i = 0; i < array.length; i++) array[i] = Double.parseDouble(form.format(array[i]));

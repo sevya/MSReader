@@ -54,20 +54,11 @@ public class MSChrom {
         String[] split = s.split("\\.");
         this.title = split[0];
         if (type.equals("MZML")) {
-//            path = f.getAbsolutePath();
-            //String s = f.getParent();
-            //String[] split = s.toString().split(Pattern.quote(File.separator));
-//            this.title = f.getName();
-            SPECTRA_UNIFORM = false;
             convertMZML(f.toString(), true);
         } else if (type.equals("CDF")) {
-//            path = f.getAbsolutePath();
-//            String s = f.getParent();
-//            String[] split = s.split(Pattern.quote(File.separator));
-//            this.title = split[split.length-1];
             convertCDF(f.toString());
         } else {
-            //do nothing
+            Utils.showErrorMessage("Invalid file format - please choose MZML or CDF");
         }
     }
     
@@ -97,9 +88,10 @@ public class MSChrom {
     
     private void convertMZML (String filename, boolean multiproc) 
             throws MzMLUnmarshallerException {
-        System.out.println("starting");
         File mzml = new File (filename);
         MzMLUnmarshaller unmarshaller = new MzMLUnmarshaller(mzml);
+        SPECTRA_UNIFORM = areSpectraUniform( unmarshaller );
+        
         Iterator<String> iter = unmarshaller.getChromatogramIDs().iterator();
         Chromatogram chrom = unmarshaller.getChromatogramById(iter.next());
         Number[] time = chrom.getBinaryDataArrayList().getBinaryDataArray().get(0).getBinaryDataAsNumberArray();
@@ -110,14 +102,25 @@ public class MSChrom {
             TIC[ 0 ][ i ] = time[ i ].floatValue();
             TIC[ 1 ][ i ] = intensity[ i ].floatValue();
         }
-        System.out.println(TIC[0].length);
         
         int objectCount = unmarshaller.getObjectCountForXpath("/run/spectrumList/spectrum");
         spectra = new MassSpectrum[objectCount];
         
+        if ( SPECTRA_UNIFORM ) {
+            Spectrum spectrum = unmarshaller.getSpectrumById(unmarshaller.getSpectrumIDFromSpectrumIndex(0));
+            BinaryDataArrayList bdal = spectrum.getBinaryDataArrayList();
+            List<BinaryDataArray> bda = bdal.getBinaryDataArray();
+            Number[] mz = bda.get(0).getBinaryDataAsNumberArray();
+            mz_values = new float[mz.length];
+
+            for (int j = 0; j < mz_values.length; j++) {
+                mz_values[j] = mz[j].floatValue();
+            }
+        }
+        
         if ( !multiproc ) {
             MZMLconverter converter = new MZMLconverter( unmarshaller, 0, objectCount,
-            spectra, TIC[0], this.title);
+            spectra, TIC[0], this.title, SPECTRA_UNIFORM);
             converter.run();
         } else {
             int no_threads = Runtime.getRuntime().availableProcessors();
@@ -126,12 +129,14 @@ public class MSChrom {
             for (int i = 0; i < threads.length; i++) {
                 int start = i*(objectCount/no_threads);
                 int end = i*(objectCount/no_threads) + (objectCount/no_threads);
-                threads[i] = new Thread(new MZMLconverter(unmarshaller, start, end, spectra, TIC[0], this.title));
+                threads[i] = new Thread(new MZMLconverter(
+                        unmarshaller, start, end, spectra, TIC[0], 
+                        this.title, SPECTRA_UNIFORM));
                 threads[i].start();
             }
-            for (int i = 0; i < threads.length; i++) {
+            for ( Thread thread : threads ) {
                 try {
-                    threads[i].join();
+                    thread.join();
                 } catch (InterruptedException ex) {
                     ex.printStackTrace();
                 }
@@ -210,15 +215,18 @@ public class MSChrom {
         MassSpectrum[] spectra;
         float[] time;
         String msChromParentTitle;
+        boolean spectraUniform;
         
         public MZMLconverter (MzMLUnmarshaller unmarsh, int s, int e, 
-                MassSpectrum[] spec, float[] t, String parentTitle) {
+                MassSpectrum[] spec, float[] t, String parentTitle, 
+                boolean uniform) {
             unmarshaller = unmarsh;
             start = s;
             end = e;
             spectra = spec;
             msChromParentTitle = parentTitle;
             time = t;
+            spectraUniform = uniform;
         }
         
         @Override
@@ -232,23 +240,38 @@ public class MSChrom {
                     BinaryDataArrayList bdal = spectrum.getBinaryDataArrayList();
                     List<BinaryDataArray> bda = bdal.getBinaryDataArray();
 
-                    Number[] mz = bda.get(0).getBinaryDataAsNumberArray();
-                    Number[] intensity = bda.get(1).getBinaryDataAsNumberArray();
+                    if ( spectraUniform ) {
+                        Number[] intensity = bda.get(1).getBinaryDataAsNumberArray();
 
-                    float[] mz_values = new float[mz.length];
-                    float[] intensity_values = new float[intensity.length];
-                    
-                    for (int j = 0; j < mz_values.length; j++) {
-                        mz_values[j] = mz[j].floatValue();
-                        intensity_values[j] = intensity[j].floatValue();
-                    }
+                        float[] intensity_values = new float[intensity.length];
 
-                    spectra[i] = new MassSpectrum(mz_values, intensity_values, 
-                            msChromParentTitle,
-                            "scan no:"+(spectrum.getIndex()+1)+" time:"+
-                                    String.format("%.2f",time[i])+"min");
-                    spectra[i].setRetentionTime(time[i]);
-                    
+                        for (int j = 0; j < intensity_values.length; j++) {
+                            intensity_values[j] = intensity[j].floatValue();
+                        }
+
+                        spectra[i] = new MassSpectrum( intensity_values, 
+                                msChromParentTitle,
+                                "scan no:"+(spectrum.getIndex()+1)+" time:"+
+                                        String.format("%.2f",time[i])+"min");
+                        spectra[i].setRetentionTime(time[i]);
+                    } else {
+                       Number[] mz = bda.get(0).getBinaryDataAsNumberArray();
+                       Number[] intensity = bda.get(1).getBinaryDataAsNumberArray();
+
+                       float[] mz_values = new float[mz.length];
+                       float[] intensity_values = new float[intensity.length];
+
+                       for (int j = 0; j < mz_values.length; j++) {
+                           mz_values[j] = mz[j].floatValue();
+                           intensity_values[j] = intensity[j].floatValue();
+                       }
+
+                       spectra[i] = new MassSpectrum(mz_values, intensity_values, 
+                               msChromParentTitle,
+                               "scan no:"+(spectrum.getIndex()+1)+" time:"+
+                                       String.format("%.2f",time[i])+"min");
+                       spectra[i].setRetentionTime(time[i]);   
+                    }                    
                 } catch (MzMLUnmarshallerException ex) {
                     ex.printStackTrace();
                 }
@@ -260,15 +283,54 @@ public class MSChrom {
     public static void main ( String[] args ) throws MzMLUnmarshallerException {
 //        MzMLUnmarshaller unmarshaller = new MzMLUnmarshaller(new File ("/Users/alexsevy/Documents/MSReader files/"
 //                + "14N4 apo/data/20151216_14N4_H20_5_4C.mzML" ));
+        long start = System.nanoTime();
         MSChrom chromatogram = new MSChrom( new File ("/Users/alexsevy/Documents/MSReader files/"
+                + "14N4 apo/data/20151216_14N4_H20_5_4C.mzML" ), "MZML", true );
+        System.out.println("Single thread: "+(System.nanoTime()-start)/Math.pow(10, 9));
+        start = System.nanoTime();
+        chromatogram = null;
+        chromatogram = new MSChrom( new File ("/Users/alexsevy/Documents/MSReader files/"
                 + "14N4 apo/data/20151216_14N4_H20_5_4C.mzML" ), "MZML", false );
+        System.out.println("Multithreaded: "+(System.nanoTime()-start)/Math.pow(10, 9));
+
     }
     
+    private boolean areSpectraUniform( MzMLUnmarshaller unmarshaller ) {
+        try {
+            int objectCount = unmarshaller.getObjectCountForXpath("/run/spectrumList/spectrum");
+            Spectrum spectrum = unmarshaller.getSpectrumById(unmarshaller.getSpectrumIDFromSpectrumIndex(0));
+            BinaryDataArrayList bdal = spectrum.getBinaryDataArrayList();
+            List<BinaryDataArray> bda = bdal.getBinaryDataArray();
+
+            Number[] mz = bda.get(0).getBinaryDataAsNumberArray();
+
+            float[] firstSpecVals = new float[100];
+
+            int firstSpecLength = mz.length;
+            for ( int i = 0; i < 100; ++i ) firstSpecVals[i] = mz[i].floatValue();
+   
+            for ( int i = 1; i < objectCount; ++i ) {
+                spectrum = unmarshaller.getSpectrumById(unmarshaller.getSpectrumIDFromSpectrumIndex(i));
+                bdal = spectrum.getBinaryDataArrayList();
+                bda = bdal.getBinaryDataArray();
+
+                mz = bda.get(0).getBinaryDataAsNumberArray();
+                if ( mz.length != firstSpecLength ) return false;
+                for ( int j = 0; j < 100; ++j ) {
+                    if (firstSpecVals[j] == mz[j].floatValue()) continue;
+                    else return false;
+                }
+            }
+        } catch (MzMLUnmarshallerException exc) { return false; }
+
+        return true;
+    }
+
     private boolean areSpectraUniform (Array array) {
         int len = getMSLength (array, 0);
-        double[] vals = new double[100];
+        float[] vals = new float[100];
         for (int i = 0; i < 100; i++) {
-            vals[i] = array.getDouble(i);
+            vals[i] = array.getFloat(i);
         }
         for (int i = len+1; i < array.getSize(); i += (len+1)) {
             for (int j = 0; j < 100; j++) {
@@ -295,19 +357,6 @@ public class MSChrom {
          }
         return -1;
     }
-    
-//    private void graphTIC () {
-//        new Plotter(FormatChange.ArrayToXYSeries(TIC, "TIC")).display();
-//        
-//    }
-//    
-//    private void graphSpectrum (int index) {
-//        double[][] data = new double[2][];
-//        MassSpectrum ms = spectra[index];
-//        data[0] = mz_values;
-//        data[1] = ms.yvals;
-//        new Plotter(data).display();
-//    }
     
     public float[][] getEIC (double startion, double endion) {
         float[][] EIC = new float[2][TIC[0].length];

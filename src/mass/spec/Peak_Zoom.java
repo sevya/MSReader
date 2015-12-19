@@ -5,21 +5,14 @@ import java.text.DecimalFormat;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import org.apache.commons.math3.fitting.GaussianFitter;
-import org.apache.commons.math3.optim.nonlinear.vector.jacobian.LevenbergMarquardtOptimizer;
 import org.jfree.chart.*;
-import org.jfree.chart.axis.*;
 import org.jfree.chart.plot.*;
-import org.jfree.chart.renderer.xy.*;
 import org.jfree.data.xy.*;
 
 public class Peak_Zoom extends javax.swing.JFrame {
 
-    float[][] data;
-    DecimalFormat myformat = new DecimalFormat ("####.###");
-    String title;
-    double peak;
-    MSReader parent;
+    private float[][] data;
+    private String title;
     
     public Peak_Zoom() {
         initComponents();
@@ -30,15 +23,13 @@ public class Peak_Zoom extends javax.swing.JFrame {
     public Peak_Zoom (MSReader msr, float[][] array, String name) {
         super ("Zoom");
         title = name;
-        parent = msr;
         data = array;
         initComponents();
-        DefaultTableModel d = new DefaultTableModel(FormatChange.ArrayToTable(array), new String[] {"m/z", "intensity"});
-        jTable1.setModel(d);
+        updateTable();
         jScrollPane1.setViewportView(jTable1);
         jScrollPane1.revalidate();        
         jTable1.setCellSelectionEnabled(true);
-        
+
         XYSeries ser = FormatChange.ArrayToXYSeries(data);
         XYSeriesCollection dataset = new XYSeriesCollection();
         dataset.addSeries(ser);
@@ -58,7 +49,7 @@ public class Peak_Zoom extends javax.swing.JFrame {
         jPanel1.add(chartPanel, BorderLayout.CENTER);
         jPanel1.revalidate();
         double cent = MSMath.calcCentroid(data);
-        centroid.setText(myformat.format(cent));
+        centroid.setText(String.format("%.3f", cent));
         this.setResizable(false);
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
@@ -66,10 +57,6 @@ public class Peak_Zoom extends javax.swing.JFrame {
     @Override
     public void setName(String str) {
         title = str;
-    }
-    
-    public void setPeak(double a) {
-        peak = a;
     }
     
     public void setChart (JFreeChart chart) {
@@ -93,7 +80,7 @@ public class Peak_Zoom extends javax.swing.JFrame {
     }
     
       private int[] peakDetector () throws NoPeakDetectedException {
-        ChoosePeakNo cpn = new ChoosePeakNo(parent, true);
+        ChoosePeakNo cpn = new ChoosePeakNo(MSReader.getInstance(), true);
         cpn.setLocationRelativeTo(this);
         cpn.setVisible(true);
         final Peptide peptide = cpn.getPeptides()[0];
@@ -274,11 +261,11 @@ public class Peak_Zoom extends javax.swing.JFrame {
                 tempy.add(data[1][i]);
             }
         }
-        data[0] = FormatChange.ArraylistToArrayFloat(tempx);
-        data[1] = FormatChange.ArraylistToArrayFloat(tempy);
-        jTable1.setModel(new DefaultTableModel (FormatChange.ArrayToTable(data), new String[] {"m/z", "intensity"}));
+        
+        updateTable();
+
         double cent = MSMath.calcCentroid(data);
-        centroid.setText(myformat.format(cent));
+        centroid.setText(String.format("%.3f", cent));
         XYSeries ser = FormatChange.ArrayToXYSeries(data);
         XYSeriesCollection dataset = new XYSeriesCollection();
         dataset.addSeries(ser);
@@ -300,6 +287,12 @@ public class Peak_Zoom extends javax.swing.JFrame {
         jPanel1.revalidate();
     }//GEN-LAST:event_deleteActionPerformed
 
+    private void updateTable() {
+        DefaultTableModel table = new DefaultTableModel( FormatChange.ArrayToTable(
+            data, new DecimalFormat("###.##"), new DecimalFormat("0.0E0") ),
+            new String[] {"m/z", "intensity"});
+        jTable1.setModel( table );
+    }
     private void trimActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_trimActionPerformed
         try {
             int[] indices = peakDetector();  
@@ -308,8 +301,10 @@ public class Peak_Zoom extends javax.swing.JFrame {
         } catch (NoPeakDetectedException e) {
             Utils.showMessage(e.getMessage());
         }
-        jTable1.setModel(new DefaultTableModel (FormatChange.ArrayToTable(data), new String[] {"m/z", "intensity"}));
-        centroid.setText(myformat.format(MSMath.calcCentroid(data)));
+        updateTable();
+        double cent = MSMath.calcCentroid( data );
+        centroid.setText(String.format("%.3f", cent));
+
         XYSeries ser = FormatChange.ArrayToXYSeries(data);
         XYSeriesCollection dataset = new XYSeriesCollection();
         dataset.addSeries(ser);

@@ -3,7 +3,9 @@ package mass.spec;
 // Class for holding data related to an HD exchange time point
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import javax.swing.table.DefaultTableModel;
 import org.apache.commons.lang.ArrayUtils;
 import org.jfree.data.xy.XYSeries;
@@ -18,7 +20,7 @@ public class HDExchangeTimePoint {
     
     Exchange_Popup window_;
     private float[][] dataRange_;
-    private float[][] tempData_;
+    private final List<float[][]> backupData_;
     private double centroid_;
     private final double timePoint_;
     private double retentionTime_;
@@ -36,6 +38,7 @@ public class HDExchangeTimePoint {
         calculateValues();
         idNumber_ = id_number;
         window_ = new Exchange_Popup( this ); 
+        backupData_ = new ArrayList();
     }
     
     public Peptide getPeptide() { return parent.getPeptide(); }
@@ -49,14 +52,17 @@ public class HDExchangeTimePoint {
     
     public double getCentroid () { return centroid_; }
     
+    public String getCentroidString () { return String.format("%.3f", centroid_); }
+    
     public double getTimePoint () { return timePoint_; } 
     
     public Integer getIDNumber () { return idNumber_; }
     
-    private void backUpData () { 
-        tempData_ = new float [ 2 ][];
-        tempData_[ 0 ] = Arrays.copyOfRange( dataRange_[ 0 ], 0, dataRange_[ 0 ].length );
-        tempData_[ 1 ] = Arrays.copyOfRange( dataRange_[ 1 ], 0, dataRange_[ 1 ].length );
+    private void backUpData () {        
+        float[][] tempData = new float [ 2 ][];
+        tempData[ 0 ] = Arrays.copyOfRange( dataRange_[ 0 ], 0, dataRange_[ 0 ].length );
+        tempData[ 1 ] = Arrays.copyOfRange( dataRange_[ 1 ], 0, dataRange_[ 1 ].length );
+        backupData_.add( tempData );
     }
     
     public void deleteRows ( int startIndex, int length ) {
@@ -70,7 +76,8 @@ public class HDExchangeTimePoint {
     }
     
     public void undoDelete () { 
-        dataRange_ = tempData_;
+//        dataRange_ = tempData_;
+        dataRange_ = backupData_.remove( backupData_.size()-1 );
         calculateValues();
         parent.updateSummary();
 

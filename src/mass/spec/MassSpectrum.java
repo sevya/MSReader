@@ -40,6 +40,12 @@ public class MassSpectrum implements Serializable{
         runTitle = run_title;
         msTitle = ms_title;
     }
+    //alternate implementation without holding x values
+    public MassSpectrum (float[] values, String run_title, String ms_title ) {
+        yvals = values;
+        runTitle = run_title;
+        msTitle = ms_title;
+    }
     
     public String getRunTitle () { return runTitle; }
     

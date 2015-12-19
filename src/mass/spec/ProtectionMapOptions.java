@@ -1,12 +1,8 @@
 package mass.spec;
 
 import java.io.File;
-import java.security.InvalidParameterException;
-import java.util.Collections;
 import javax.swing.JFileChooser;
-import javax.swing.JOptionPane;
 import javax.swing.UIManager;
-import javax.swing.table.DefaultTableModel;
 import org.biojava.bio.structure.Chain;
 import org.biojava.bio.structure.Structure;
 import org.biojava3.structure.StructureIO;
@@ -104,9 +100,6 @@ public class ProtectionMapOptions extends javax.swing.JDialog {
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 286, Short.MAX_VALUE)
-                        .addGap(216, 216, 216))
-                    .addGroup(jPanel2Layout.createSequentialGroup()
                         .addComponent(exchange)
                         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addGroup(jPanel2Layout.createSequentialGroup()
@@ -114,8 +107,9 @@ public class ProtectionMapOptions extends javax.swing.JDialog {
                             .addComponent(excel)
                             .addComponent(protection, javax.swing.GroupLayout.PREFERRED_SIZE, 235, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(jLabel1)
-                            .addComponent(hdx))
-                        .addGap(0, 0, Short.MAX_VALUE))))
+                            .addComponent(hdx)
+                            .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 476, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(0, 14, Short.MAX_VALUE))))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -218,7 +212,7 @@ public class ProtectionMapOptions extends javax.swing.JDialog {
                 .addContainerGap(204, Short.MAX_VALUE))
         );
 
-        jTabbedPane1.addTab("Advanced", jPanel3);
+        jTabbedPane1.addTab("B factors", jPanel3);
 
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);

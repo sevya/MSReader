@@ -10,38 +10,71 @@ import javax.swing.JOptionPane;
 import org.apache.commons.math3.stat.inference.TTest;
 
 public class ProtectionMap {
-    
-    // Doesn't require pdb or pymol path
-    public static void createProtectionMap (HDRun[][] forms, File outPath, String sequence) {
-        double[] deuteration;        
-        // If you're analyzing exchange
-        if (forms.length == 1) {
-            List<String> peptidelist = new ArrayList();
-            List<Double> deuterium = new ArrayList();
-            for (int i = 0; i < forms[0].length; i++) {
-                peptidelist.add( forms[0][i].getPeptide().sequenceNoModification() );
-                
-                // TODO pulls value from last time point - find a way to make this more flexible
-                Object[][] pctValues = forms[0][i].getPercentValues();
-                Double latestTimePoint = MSMath.getMax( pctValues[0] );
-                Double avgValue = 0.0;
-                int count = 0;
-                for ( int ii = 0; ii < pctValues[0].length; ++ii ) {
-                    if ( ((Double)pctValues[0][ii]) - latestTimePoint < Math.pow(10, -4)) {
-                        avgValue += (Double)pctValues[1][ii];
-                        count++;
-                    }
-                }
-                avgValue /= count;
-                deuterium.add(avgValue);
-            }
-
-            deuteration = calculateResidueDeuteration (peptidelist, deuterium, sequence );
-        // If you're analyzing protection
-        } else { 
-            Utils.showWarningMessage("Protection maps are under construction");
-            return;
+        
+    public static void createProtectionMap (HDRun[] form, 
+            File outPath, String sequence) {
+        // Get time point for protection map
+        /// Use first instance of HDRun - TODO fix this to be better
+        Double[] timePoints = new Double[form[0].getTimePoints().size()];
+        timePoints = form[0].getTimePoints().toArray( timePoints );
+        Double timePoint = (Double)JOptionPane.showInputDialog(
+                            new JFrame(),
+                            "Choose your time point to measure exchange",
+                            "Exchange Map",
+                            JOptionPane.PLAIN_MESSAGE,
+                            new ImageIcon(),
+                            timePoints,
+                            timePoints[0]);
+        
+        List<String> peptidelist = new ArrayList();
+        List<Double> deuterium = new ArrayList();
+        for (int i = 0; i < form.length; i++) {
+            peptidelist.add( form[i].getPeptide().sequenceNoModification() );                
+            deuterium.add( form[i].getAvgPercentAtTime( timePoint ) );
         }
+
+        double[] deuteration = calculateResidueDeuteration (peptidelist, deuterium, sequence );
+        writeHeatMap( deuteration, outPath );
+    }
+    
+    public static void createProtectionMap (HDRun[] free, HDRun[] bound, 
+            File outPath, String sequence) {
+        /// Get time point for protection map
+        /// Use first instance of HDRun - TODO fix this to be better
+        Double[] timePoints = new Double[free[0].getTimePoints().size()];
+        timePoints = free[0].getTimePoints().toArray( timePoints );
+        Double timePoint = (Double)JOptionPane.showInputDialog(
+                            new JFrame(),
+                            "Choose your time point to measure exchange",
+                            "Exchange Map",
+                            JOptionPane.PLAIN_MESSAGE,
+                            new ImageIcon(),
+                            timePoints,
+                            timePoints[0]);
+        
+
+        List<String> peptidelist = new ArrayList();
+        List<Double> deuterium = new ArrayList();
+        for (int freeIndex = 0; freeIndex < free.length; freeIndex++) {
+            // find index of peptide in the protected set
+            int boundIndex = -1;
+            String peptideUnprotected = free[freeIndex].getPeptide().sequenceNoModification();
+            for ( int j = 0; j < bound.length; ++j ) {
+                if ( peptideUnprotected.equals( bound[j].getPeptide().sequenceNoModification() )) {
+                    boundIndex = j;
+                    break;
+                }
+            }
+            if ( boundIndex == -1 ) {
+                Utils.showErrorMessage("Peptide "+peptideUnprotected+" not found in bound state");
+                continue;
+            }
+            peptidelist.add( peptideUnprotected );                
+            deuterium.add( free[freeIndex].getAvgPercentAtTime( timePoint ) -
+                    bound[boundIndex].getAvgPercentAtTime( timePoint ) );
+        }
+
+        double[] deuteration = calculateResidueDeuteration (peptidelist, deuterium, sequence );
         writeHeatMap( deuteration, outPath );
     }
     
@@ -85,68 +118,7 @@ public class ProtectionMap {
         }
 
     }
-    
-    public static void createExchangeLines (HDRun[][] forms, File outPath, String sequence) {
-        /// Get time point for protection map
-        /// Use first instance of HDRun - TODO fix this to be better
-        Double[] timePoints = new Double[forms[0][0].getTimePoints().size()];
-        timePoints = forms[0][0].getTimePoints().toArray( timePoints );
-        Double timePoint = (Double)JOptionPane.showInputDialog(
-                            new JFrame(),
-                            "Choose your time point to measure exchange",
-                            "Exchange Map",
-                            JOptionPane.PLAIN_MESSAGE,
-                            new ImageIcon(),
-                            timePoints,
-                            timePoints[0]);
         
-        double[] deuteration;        
-        // If you're analyzing exchange
-        if (forms.length == 1) {
-            List<String> peptidelist = new ArrayList();
-            List<Double> deuterium = new ArrayList();
-            for (int i = 0; i < forms[0].length; i++) {
-                peptidelist.add( forms[0][i].getPeptide().sequenceNoModification() );                
-                deuterium.add( forms[0][i].getAvgPercentAtTime( timePoint ) );
-                System.out.println(peptidelist.get(peptidelist.size()-1)+"\t"+
-                        deuterium.get(deuterium.size()-1));
-            }
-
-            deuteration = calculateResidueDeuteration (peptidelist, deuterium, sequence );   
-            List<Color> colorlist = calculateColors( deuterium );
-            Drawer.drawExchangeMap( sequence, peptidelist, colorlist );
-        // If you're analyzing protection
-        } else {             
-            List<String> peptidelist = new ArrayList();
-            List<Double> deuterium = new ArrayList();
-            for (int i = 0; i < forms[0].length; i++) {
-                // find index of peptide in the protected set
-                int protectedIndex = -1;
-                String peptideUnprotected = forms[0][i].getPeptide().sequenceNoModification();
-                for ( int j = 0; j < forms[1].length; ++j ) {
-                    if ( peptideUnprotected.equals( forms[1][j].getPeptide().sequenceNoModification() )) {
-                        protectedIndex = j;
-                        break;
-                    }
-                }
-                if ( protectedIndex == -1 ) {
-                    Utils.showErrorMessage("Peptide "+peptideUnprotected+" not found in bound state");
-                    continue;
-                }
-                peptidelist.add( peptideUnprotected );                
-                deuterium.add( forms[0][i].getAvgPercentAtTime( timePoint ) -
-                        forms[1][protectedIndex].getAvgPercentAtTime( timePoint ) );
-                System.out.println(peptidelist.get(peptidelist.size()-1)+"\t"+
-                        deuterium.get(deuterium.size()-1));
-            }
-
-            deuteration = calculateResidueDeuteration (peptidelist, deuterium, sequence );   
-            List<Color> colorlist = calculateColors( deuterium, true );
-            Drawer.drawExchangeMap( sequence, peptidelist, colorlist );
-        }
-        writeHeatMap( deuteration, outPath );
-    }
-    
     ///@brief Draws exchange pattern for one state
     public static void createExchangeLines (HDRun[] form, File outPath, String sequence) {
         /// Get time point for protection map
@@ -232,10 +204,6 @@ public class ProtectionMap {
                             timePoints,
                             timePoints[0]);
         
-        double[] deuteration;                
-        // If you're analyzing protection
-        List<String> peptidelist = new ArrayList();
-        List<Double> deuterium = new ArrayList();
         String printStr = "";
         for (int freeIndex = 0; freeIndex < free.length; freeIndex++) {
             // find index of peptide in the protected set
@@ -273,7 +241,6 @@ public class ProtectionMap {
         }
 
     }
-    
     
     private static void writeHeatMap( double[] deuteration, File outPath ) {  
         try {

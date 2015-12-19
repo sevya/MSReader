@@ -2,7 +2,6 @@ package mass.spec;
 
 import java.awt.*;
 import java.io.*;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -40,7 +39,6 @@ public class MSReader extends javax.swing.JFrame {
     public static final int SMOOTH_MOVING_AVG = 0;
     public static final int SMOOTH_SAV_GOL = 1;
     
-    private double stepSize;
     private SwingWorker worker;
     private PeptideList peptides_;
     
@@ -268,6 +266,7 @@ public class MSReader extends javax.swing.JFrame {
         autoHDX = new javax.swing.JMenuItem();
         manualHDX = new javax.swing.JMenuItem();
         generateHeatMap = new javax.swing.JMenuItem();
+        structuralHeatMap = new javax.swing.JMenuItem();
         calcSignificance = new javax.swing.JMenuItem();
         sequenceEngine = new javax.swing.JMenuItem();
 
@@ -420,7 +419,7 @@ public class MSReader extends javax.swing.JFrame {
 
         hdExchangeMenu.setText("HD Exchange");
 
-        viewHDExchangeMenu.setText("View HD Exchange");
+        viewHDExchangeMenu.setText("Launch HD Exchange");
         viewHDExchangeMenu.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 viewHDExchangeMenuActionPerformed(evt);
@@ -504,6 +503,14 @@ public class MSReader extends javax.swing.JFrame {
             }
         });
         experimentalMenu.add(generateHeatMap);
+
+        structuralHeatMap.setText("Make structural heat map");
+        structuralHeatMap.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                structuralHeatMapActionPerformed(evt);
+            }
+        });
+        experimentalMenu.add(structuralHeatMap);
 
         calcSignificance.setText("Calculate significance ");
         calcSignificance.addActionListener(new java.awt.event.ActionListener() {
@@ -720,10 +727,8 @@ public class MSReader extends javax.swing.JFrame {
                 currentMS = currentMSC.spectra[0];
                 XYSeries spec;
                 if (currentMSC.SPECTRA_UNIFORM) {
-                    stepSize = currentMSC.mz_values[50] - currentMSC.mz_values[49];
                     spec = FormatChange.ArrayToXYSeries(currentMSC.mz_values, currentMS.yvals);
                 } else {
-                    stepSize = currentMS.msValues[0][50] - currentMS.msValues[0][49];
                     spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
                 }
                 specData.addSeries(spec);
@@ -788,7 +793,7 @@ public class MSReader extends javax.swing.JFrame {
                 } else {
                         int SGfilter = getIntProperty("SGfilter");
                         int SGdegree = getIntProperty("SGdegree");
-                    if (currentMS.msValues == null) {
+                    if (currentMSC.SPECTRA_UNIFORM) {
                         currentMS.smoothSavitzkyGolay (currentMSC.mz_values, SGfilter, SGdegree);
                     } else {
                         currentMS.smoothSavitzkyGolay(SGfilter, SGdegree);
@@ -860,37 +865,30 @@ public class MSReader extends javax.swing.JFrame {
         }
         float peakNo = Float.parseFloat(peak.getText());
         float[][] data = new float [2][];
-        if (currentMS.msValues == null) {
-            int peakIndex = Utils.binarySearch(currentMSC.mz_values, peakNo);
-            stepSize = currentMSC.mz_values[50] - currentMSC.mz_values[49];
+        if ( currentMSC.SPECTRA_UNIFORM ) {
             int windowSize = getIntProperty("windowSize");
-            int startIndex = peakIndex - (int) (windowSize/stepSize);
+            int startIndex = Utils.binarySearch(currentMSC.mz_values, peakNo - windowSize);
+            int endIndex = Utils.binarySearch(currentMSC.mz_values, peakNo + windowSize);
             if (startIndex < 0) startIndex = 0; 
-            int endIndex = peakIndex + (int) (windowSize/stepSize);
             if (endIndex >= currentMSC.mz_values.length) endIndex = currentMSC.mz_values.length - 1;
             data[0] = Arrays.copyOfRange(currentMSC.mz_values, startIndex, endIndex);
             data[1] = Arrays.copyOfRange(currentMS.yvals, startIndex, endIndex);
         } else {
-            int peakIndex = Utils.binarySearch(currentMS.msValues[0], peakNo);
-            stepSize = currentMS.msValues[0][50] - currentMS.msValues[0][49];
             int windowSize = getIntProperty("windowSize");
-            int startIndex = peakIndex - (int) (windowSize/stepSize);
+            int startIndex = Utils.binarySearch(currentMS.msValues[0], peakNo - windowSize);
+            int endIndex = Utils.binarySearch(currentMS.msValues[0], peakNo + windowSize);
             if (startIndex < 0) startIndex = 0; 
-            int endIndex = peakIndex + (int) (windowSize/stepSize);
             if (endIndex >= currentMS.msValues[0].length) endIndex = currentMS.msValues[0].length - 1; 
             data[0] = Arrays.copyOfRange(currentMS.msValues[0], startIndex, endIndex);
             data[1] = Arrays.copyOfRange(currentMS.msValues[1], startIndex, endIndex);
         }
-
         
         XYSeries series = FormatChange.ArrayToXYSeries(data);
         XYSeriesCollection dataset = new XYSeriesCollection();
         dataset.addSeries(series);
-        String zoomTitle = "peak " + peakNo;
-        DecimalFormat dataformat = FormatChange.getFormat(stepSize);
-        FormatChange.FormatArray(data[0], dataformat);
+        String zoomTitle = String.format("peak %.3f", peakNo);
+
         Peak_Zoom pz = new Peak_Zoom(this, data, zoomTitle);
-        pz.setPeak(peakNo);
         pz.setVisible(true);  
     }//GEN-LAST:event_zoomToPeakActionPerformed
 
@@ -931,7 +929,7 @@ public class MSReader extends javax.swing.JFrame {
             currentMS = currentMSC.spectra[tIndex];
         }
         XYSeries spec;
-        if (currentMS.msValues == null) {
+        if (currentMSC.SPECTRA_UNIFORM) {
             spec = FormatChange.ArrayToXYSeries(currentMSC.mz_values, currentMS.yvals);
         } else {
             spec = FormatChange.ArrayToXYSeries(currentMS.msValues);
@@ -1110,7 +1108,7 @@ public class MSReader extends javax.swing.JFrame {
                 PrintWriter out;
                 try {
                     out = new PrintWriter (new FileOutputStream(f));
-                    if (currentMS.msValues == null) {
+                    if (currentMSC.SPECTRA_UNIFORM) {
                         for (int i = 0; i < currentMSC.mz_values.length; i++) {
                             out.println(currentMSC.mz_values[i] + "," + currentMS.yvals[i]);
                         }
@@ -1242,7 +1240,7 @@ public class MSReader extends javax.swing.JFrame {
                         hdExchangeInstances[ii].addSpectrum( currentMS );
                     }
                     
-                    // Erase current chromatogram to save space
+                    // Deallocate current chromatogram to save space
                     currentMSC = null;
                 }
               return null;  
@@ -1392,6 +1390,42 @@ public class MSReader extends javax.swing.JFrame {
         ProtectionMap.calculateSignificance( free, bound );
     }//GEN-LAST:event_calcSignificanceActionPerformed
 
+    private void structuralHeatMapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_structuralHeatMapActionPerformed
+        ProtectionMapOptions opt = new ProtectionMapOptions(this, true);
+        opt.setLocationRelativeTo(this);
+        opt.setVisible(true);
+        final boolean protection = opt.getExchangeBool();
+        boolean HDXinput = opt.getHDXBool();
+        if ( !HDXinput ) {
+            Utils.showErrorMessage( "You can't run this from an excel file fuckface" );
+            return;
+        }
+        final String seq = opt.getSequence();
+        final File outputpath = opt.getOutputPath();
+        if ( seq.equals("") ) return;
+        if (!outputpath.getParentFile().exists()) {
+            Utils.showErrorMessage ("Invalid script output path");
+            return;
+        }
+        
+        if (HDXinput) {            
+            // If this is a protection map, need to load two sets of HDX files
+            if ( protection ) {
+                HDRun[] free = loadHDXFiles( "Choose HDX files for free state" );
+                if ( free.length == 0 ) return;
+                HDRun[] bound = loadHDXFiles( "Choose HDX files for bound state" );
+                if ( bound.length == 0 ) return;
+
+                ProtectionMap.createProtectionMap(free, bound, outputpath, seq);
+                
+            } else {
+                HDRun[] hdrs = loadHDXFiles( "Choose HDX files for heat map" );
+                if ( hdrs.length == 0 ) return;
+                ProtectionMap.createProtectionMap(hdrs, outputpath, seq);
+            }
+        } 
+    }//GEN-LAST:event_structuralHeatMapActionPerformed
+
     private HDRun[] loadHDXFiles ( String dialogTitle ) {
         fileChooser.setMultiSelectionEnabled(true);
         fileChooser.setFileFilter(ExtensionFilter.hdxfilter);
@@ -1408,56 +1442,7 @@ public class MSReader extends javax.swing.JFrame {
             hdruns[ i ] = Utils.readHDRun( filegroup[i] );
         }
         return hdruns;
-    }
-    
-    public HeatMapGradient getGradient () {
-        if (properties.getProperty("gradientpath").equals("")) initGradient();
-        if (!new File (properties.getProperty("gradientpath")).exists()) initGradient();
-        try {
-            ObjectInputStream ois = new ObjectInputStream (new FileInputStream (new File (properties.getProperty("gradientpath"))));
-            return (HeatMapGradient)ois.readObject();
-        } catch ( IOException e ) { 
-            Utils.logException(bin, e);
-            return null;
-        } catch (ClassNotFoundException e) {
-            Utils.logException(bin, e);
-            return null;
-        }
-    }
-    
-    public void initGradient() {
-        HeatMapGradient grade = new HeatMapGradient();
-        grade.addRedLevel (.1425, new int[] {150, 0, 0});
-        grade.addRedLevel (.135, new int[] {165, 0, 0});
-        grade.addRedLevel (.1275, new int[] {175, 0, 0});
-        grade.addRedLevel (.12, new int[] {185, 0, 0});
-        grade.addRedLevel (.1125, new int[] {255, 0, 0});
-        grade.addRedLevel (.105, new int[] {255, 40, 0});
-        grade.addRedLevel (.09, new int[] {255, 80, 0});
-        grade.addRedLevel (.075, new int[] {255, 100, 0});
-        grade.addRedLevel (.06, new int[] {255, 140, 0});
-        grade.addRedLevel (.045, new int[] {255, 160, 0});
-        grade.addRedLevel (.03, new int[] {255, 200, 0});
-        grade.addRedLevel (.015, new int[] {255, 225, 0});
-        grade.addBlueLevel (.379917, new int[] {0, 0, 150});
-        grade.addBlueLevel (.368167, new int[] {0, 0, 165});
-        grade.addBlueLevel (.3525, new int[] {0, 0, 175});
-        grade.addBlueLevel (.336833, new int[] {0, 0, 185});
-        grade.addBlueLevel (.325083, new int[] {0, 0, 195});
-        grade.addBlueLevel (.313333, new int[] {0, 0, 200});
-        grade.addBlueLevel (.29375, new int[] {0, 0, 255});
-        grade.addBlueLevel (.274167, new int[] {0, 40, 255});
-        grade.addBlueLevel (.254583, new int[] {0, 80, 255});
-        grade.addBlueLevel (.235, new int[] {0, 160, 255});
-        grade.addBlueLevel (.156667, new int[] {0, 200, 255});
-        grade.addBlueLevel (.1175, new int[] {0, 225, 255});
-        File gradpath = Utils.osjoin(bin, "gradient.gr");
-        grade.setPath (gradpath);
-        grade.save();
-        properties.setProperty("gradientpath", gradpath.toString());
-        saveProperties();
-    }
-    
+    }    
 
     public static void main(String args[]) {
         try {
@@ -1529,6 +1514,7 @@ public class MSReader extends javax.swing.JFrame {
     private javax.swing.JMenuItem smoothingOptions;
     private javax.swing.JTextField spectrumattime;
     private javax.swing.JSplitPane splitPane;
+    private javax.swing.JMenuItem structuralHeatMap;
     private javax.swing.JToolBar toolbar;
     private javax.swing.JMenuItem viewHDExchangeMenu;
     private javax.swing.JMenuItem viewHelp;
