@@ -38,9 +38,9 @@ public class MassSpectrum implements Serializable{
     
     public MassSpectrum(double[] x, double[] y, String run_title, String ms_title ) {
         if (x.length != y.length) throw new IndexOutOfBoundsException();
-        msValues = new double [2][x.length];
-        System.arraycopy(x, 0, msValues[0], 0, x.length);
-        System.arraycopy(y, 0, msValues[1], 0, y.length);
+        msValues = new double [2][];
+        msValues[0] = x;
+        msValues[1] = y;
         runTitle = run_title;
         msTitle = ms_title;
     }
@@ -80,6 +80,7 @@ public class MassSpectrum implements Serializable{
 
         return getRange( startIndex, endIndex);
     }
+    
     public double getYMax() {
         if (msValues == null) return getYMax (0, yvals.length);
         else return getYMax (0, msValues[1].length);

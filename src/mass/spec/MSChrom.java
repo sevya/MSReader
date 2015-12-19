@@ -47,7 +47,8 @@ public class MSChrom {
         convertCDF(f.toString());
     }
     
-    public MSChrom (File f, String type) throws MzMLUnmarshallerException {
+    public MSChrom (File f, String type) 
+            throws MzMLUnmarshallerException {
         path = f.getAbsolutePath();
         String s = f.getName();
         String[] split = s.split("\\.");
@@ -58,12 +59,28 @@ public class MSChrom {
             //String[] split = s.toString().split(Pattern.quote(File.separator));
 //            this.title = f.getName();
             SPECTRA_UNIFORM = false;
-            convertMZML(f.toString());
+            convertMZML(f.toString(), true);
         } else if (type.equals("CDF")) {
 //            path = f.getAbsolutePath();
 //            String s = f.getParent();
 //            String[] split = s.split(Pattern.quote(File.separator));
 //            this.title = split[split.length-1];
+            convertCDF(f.toString());
+        } else {
+            //do nothing
+        }
+    }
+    
+        public MSChrom (File f, String type, boolean multiproc) 
+                throws MzMLUnmarshallerException {
+        path = f.getAbsolutePath();
+        String s = f.getName();
+        String[] split = s.split("\\.");
+        this.title = split[0];
+        if (type.equals("MZML")) {
+            SPECTRA_UNIFORM = false;
+            convertMZML(f.toString(), multiproc);
+        } else if (type.equals("CDF")) {
             convertCDF(f.toString());
         } else {
             //do nothing
@@ -78,7 +95,9 @@ public class MSChrom {
         spectra = getSpectraFromCDF();
     }
     
-    private void convertMZML (String filename) throws MzMLUnmarshallerException {
+    private void convertMZML (String filename, boolean multiproc) 
+            throws MzMLUnmarshallerException {
+        System.out.println("starting");
         File mzml = new File (filename);
         MzMLUnmarshaller unmarshaller = new MzMLUnmarshaller(mzml);
         Iterator<String> iter = unmarshaller.getChromatogramIDs().iterator();
@@ -91,36 +110,33 @@ public class MSChrom {
             TIC[ 0 ][ i ] = time[ i ].doubleValue();
             TIC[ 1 ][ i ] = intensity[ i ].doubleValue();
         }
-        time = null;
-        intensity = null;
+        System.out.println(TIC[0].length);
         
-        int no_threads = Runtime.getRuntime().availableProcessors();
-        Thread[] threads = new Thread[no_threads+1];
-        int object_count = unmarshaller.getObjectCountForXpath("/run/spectrumList/spectrum");
-        spectra = new MassSpectrum[object_count];
+        int objectCount = unmarshaller.getObjectCountForXpath("/run/spectrumList/spectrum");
+        spectra = new MassSpectrum[objectCount];
         
-//        // Try with one thread - maybe multithreading is causing the problem
-//        Thread thread = new Thread(new MZMLconverter(unmarshaller, 0, object_count, spectra, TIC[0], this.title));
-//        thread.start();
-//        try {
-//            thread.join();
-//        } catch (InterruptedException ex) {
-//                ex.printStackTrace();
-//            }
-        for (int i = 0; i < threads.length; i++) {
-            int start = i*(object_count/no_threads);
-            int end = i*(object_count/no_threads) + (object_count/no_threads);
-            threads[i] = new Thread(new MZMLconverter(unmarshaller, start, end, spectra, TIC[0], this.title));
-            threads[i].start();
-        }
-        for (int i = 0; i < threads.length; i++) {
-            try {
-                threads[i].join();
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
+        if ( !multiproc ) {
+            MZMLconverter converter = new MZMLconverter( unmarshaller, 0, objectCount,
+            spectra, TIC[0], this.title);
+            converter.run();
+        } else {
+            int no_threads = Runtime.getRuntime().availableProcessors();
+            Thread[] threads = new Thread[no_threads+1];
+
+            for (int i = 0; i < threads.length; i++) {
+                int start = i*(objectCount/no_threads);
+                int end = i*(objectCount/no_threads) + (objectCount/no_threads);
+                threads[i] = new Thread(new MZMLconverter(unmarshaller, start, end, spectra, TIC[0], this.title));
+                threads[i].start();
+            }
+            for (int i = 0; i < threads.length; i++) {
+                try {
+                    threads[i].join();
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
             }
         }
-//        System.out.println(spectra.length+" spectra data points");
     }
     
     private void readCDF (String filename) {
@@ -206,26 +222,26 @@ public class MSChrom {
         
         @Override
         public void run() {
-            Spectrum spectrum;
             for (int i = start; i < end; i++) {
                 if (i >= unmarshaller.getObjectCountForXpath("/run/spectrumList/spectrum")) {
                     break;
                 }
                 try {
-                    spectrum = unmarshaller.getSpectrumById(unmarshaller.getSpectrumIDFromSpectrumIndex(i));
+                    Spectrum spectrum = unmarshaller.getSpectrumById(unmarshaller.getSpectrumIDFromSpectrumIndex(i));
                     BinaryDataArrayList bdal = spectrum.getBinaryDataArrayList();
                     List<BinaryDataArray> bda = bdal.getBinaryDataArray();
+
                     Number[] mz = bda.get(0).getBinaryDataAsNumberArray();
                     Number[] intensity = bda.get(1).getBinaryDataAsNumberArray();
-                    bda = null;
+
                     double[] mz_values = new double[mz.length];
                     double[] intensity_values = new double[intensity.length];
+                    
                     for (int j = 0; j < mz_values.length; j++) {
                         mz_values[j] = mz[j].doubleValue();
                         intensity_values[j] = intensity[j].doubleValue();
                     }
-                    mz = null;
-                    intensity = null;
+
                     spectra[i] = new MassSpectrum(mz_values, intensity_values, 
                             msChromParentTitle,
                             "scan no:"+(spectrum.getIndex()+1)+" time:"+
@@ -240,14 +256,11 @@ public class MSChrom {
         }
     }
  
-    public static void main (String[] args) {
-//        MzMLUnmarshaller unmarshaller = new MzMLUnmarshaller( new File("/Users/alexsevy/Documents/02-15LOX.mzML") );
-        try {
-            MSChrom test = new MSChrom( new File("/Users/alexsevy/Documents/MSReader files/14N4/20151110_14N4_rt_10_ms1.mzML"), "MZML");
-//            for ( MassSpectrum ms : test.spectra ) { System.out.println(ms.getRetentionTime()); }
-        } catch ( MzMLUnmarshallerException exc ) {
-                exc.printStackTrace();
-        }
+    public static void main ( String[] args ) throws MzMLUnmarshallerException {
+//        MzMLUnmarshaller unmarshaller = new MzMLUnmarshaller(new File ("/Users/alexsevy/Documents/MSReader files/"
+//                + "14N4 apo/data/20151216_14N4_H20_5_4C.mzML" ));
+        MSChrom chromatogram = new MSChrom( new File ("/Users/alexsevy/Documents/MSReader files/"
+                + "14N4 apo/data/20151216_14N4_H20_5_4C.mzML" ), "MZML", false );
     }
     
     private boolean areSpectraUniform (Array array) {

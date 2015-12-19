@@ -136,7 +136,7 @@ public class Plotter extends JFrame {
                 "",
                 dataset,
                 PlotOrientation.VERTICAL,
-                true,
+                false,
                 true,
                 false
                 );

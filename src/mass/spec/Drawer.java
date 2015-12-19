@@ -27,8 +27,6 @@ public class Drawer extends JPanel implements ActionListener {
     private final JMenuItem saveItem;
     private final JFrame mainFrame;
     
-    private boolean imageRendered;
-    private int renderCount;
     
     public Drawer( String parent, List<String> peptides, List<Color> cols ) {
         parentSequence = parent.replaceAll("\\s+", "");
@@ -51,9 +49,6 @@ public class Drawer extends JPanel implements ActionListener {
         mainFrame.pack();  
         
         mainFrame.setJMenuBar(menuBar);
-        
-        imageRendered = false;
-        renderCount = 0;
 
     }
     
@@ -109,9 +104,7 @@ public class Drawer extends JPanel implements ActionListener {
         }
         
         setSize(new Dimension(letterWidth*aaPerLine+2*startX, 600));
-        
-        imageRendered = true;
-        renderCount++;
+
     }
     
     private void drawSequence( Graphics g, String sequence, int aaPerLine, 
@@ -320,3 +313,4 @@ final class PeptideLine  {
                     ya1 < yb2 && yb2 > ya1;
         }
     }
+
