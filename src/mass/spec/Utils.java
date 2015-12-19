@@ -149,6 +149,13 @@ public class Utils {
         return index;
     }
     
+    // binary search of an array that returns the insertion point of the target
+    public static int binarySearch (float[] array, float key) {
+        int index = Arrays.binarySearch (array, key);
+        if (index < 0) index = -(index + 1);
+        return index;
+    }
+    
     // Generic method for binary search of a list
     public static int binarySearch ( List<Double> array, Double key ) {
         int index = Collections.binarySearch (array, key);
@@ -430,7 +437,7 @@ public class Utils {
                         try {
                             Peptide pept = new Peptide (tiago[0],
                                     Integer.parseInt(tiago[2]), 
-                                    Double.parseDouble(tiago[3]));
+                                    Float.parseFloat(tiago[3]));
                             peptArray.add( pept );
                         } catch ( Exception e ) {
                             e.printStackTrace();

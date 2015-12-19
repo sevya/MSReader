@@ -15,7 +15,7 @@ import org.jfree.data.xy.*;
 
 public class Peak_Zoom extends javax.swing.JFrame {
 
-    double[][] data;
+    float[][] data;
     DecimalFormat myformat = new DecimalFormat ("####.###");
     String title;
     double peak;
@@ -27,7 +27,7 @@ public class Peak_Zoom extends javax.swing.JFrame {
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
     
-    public Peak_Zoom (MSReader msr, double[][] array, String name) {
+    public Peak_Zoom (MSReader msr, float[][] array, String name) {
         super ("Zoom");
         title = name;
         parent = msr;
@@ -113,7 +113,7 @@ public class Peak_Zoom extends javax.swing.JFrame {
         
         if (score < .5) throw new NoPeakDetectedException("No peak detected - does not match input peptide");
         
-        int start = Utils.binarySearch (data[0], tope[0][0]);
+        int start = Utils.binarySearch (FormatChange.Float2Double(data[0]), tope[0][0]);
         int beforeindex = 0;
         max = MSMath.getMax(data[1]);
         double lowerthresh = (max > 10000) ? 500 : max*.05;
@@ -125,7 +125,7 @@ public class Peak_Zoom extends javax.swing.JFrame {
             } 
         }
         
-        int after = Utils.binarySearch (data[0], tope[0][endindex]);
+        int after = Utils.binarySearch (FormatChange.Float2Double(data[0]), tope[0][endindex]);
         int afterindex = data[0].length;
         for (int i = after; i < data[0].length; i++) {
             if (data[1][i] < lowerthresh) {
@@ -137,7 +137,7 @@ public class Peak_Zoom extends javax.swing.JFrame {
         return new int[] {beforeindex, afterindex};
     } 
      
-     private double getShift (double[][] data, double[][] isotope, Peptide peptide) {
+     private double getShift (float[][] data, double[][] isotope, Peptide peptide) {
         int counter = 1;
         double score = MSMath.getScore(data, isotope);
         double maxscore = score;
@@ -265,8 +265,8 @@ public class Peak_Zoom extends javax.swing.JFrame {
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
         int start = jTable1.getSelectedRow();
         int len = jTable1.getSelectedRowCount();
-        ArrayList<Double> tempx = new ArrayList();
-        ArrayList<Double> tempy = new ArrayList();
+        ArrayList<Float> tempx = new ArrayList();
+        ArrayList<Float> tempy = new ArrayList();
         for (int i = 0; i < data[0].length; i++) {
             if (i >= start && i < start+len) continue;
             else {
@@ -274,8 +274,8 @@ public class Peak_Zoom extends javax.swing.JFrame {
                 tempy.add(data[1][i]);
             }
         }
-        data[0] = FormatChange.ArraylistToArray(tempx);
-        data[1] = FormatChange.ArraylistToArray(tempy);
+        data[0] = FormatChange.ArraylistToArrayFloat(tempx);
+        data[1] = FormatChange.ArraylistToArrayFloat(tempy);
         jTable1.setModel(new DefaultTableModel (FormatChange.ArrayToTable(data), new String[] {"m/z", "intensity"}));
         double cent = MSMath.calcCentroid(data);
         centroid.setText(myformat.format(cent));

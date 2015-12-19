@@ -2,43 +2,39 @@ package mass.spec;
 
 import java.io.*;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 public class MassSpectrum implements Serializable{
-    public double[][] msValues;
+    public float[][] msValues;
     //alternate implementation without holding x values
-    public double[] yvals;
+    public float[] yvals;
     //
     public String msTitle;
     public String runTitle;
     private double retentionTime; 
     
-    public MassSpectrum (double[][] values, String title) {
-        msValues = new double[2][values[0].length];
-//        System.arraycopy (values[0], 0, msValues[0], 0, values[0].length);
-//        System.arraycopy (values[1], 0, msValues[1], 0, values[1].length);
+    public MassSpectrum (float[][] values, String title) {
+        msValues = new float[2][values[0].length];
         msValues = values;
         msTitle = title;
     }
     
     //alternate implementation without holding x values
-    public MassSpectrum (double[] values, String str) {
-        yvals = new double[values.length];
+    public MassSpectrum (float[] values, String str) {
+        yvals = new float[values.length];
         System.arraycopy (values, 0, yvals, 0, values.length);
         msTitle = str;
     }
     
-    public MassSpectrum(double[] x, double[] y ) {
+    public MassSpectrum(float[] x, float[] y ) {
         if (x.length != y.length) throw new IndexOutOfBoundsException();
-        msValues = new double [2][x.length];
+        msValues = new float [2][x.length];
         System.arraycopy(x, 0, msValues[0], 0, x.length);
         System.arraycopy(y, 0, msValues[1], 0, y.length);
     }
     
-    public MassSpectrum(double[] x, double[] y, String run_title, String ms_title ) {
+    public MassSpectrum(float[] x, float[] y, String run_title, String ms_title ) {
         if (x.length != y.length) throw new IndexOutOfBoundsException();
-        msValues = new double [2][];
+        msValues = new float [2][];
         msValues[0] = x;
         msValues[1] = y;
         runTitle = run_title;
@@ -63,31 +59,31 @@ public class MassSpectrum implements Serializable{
         if ( msValues == null ) {
             return -1;
         } else {
-            return Utils.binarySearch( msValues[0], peakValue );
+            return Utils.binarySearch( msValues[0], (float)peakValue );
         }
     }
     
-    public double[][] getRange ( int startIndex, int endIndex ) {
-        double[][] temp = new double [2][];
+    public float[][] getRange ( int startIndex, int endIndex ) {
+        float[][] temp = new float [2][];
         temp[ 0 ] = Arrays.copyOfRange(this.msValues[0], startIndex, endIndex);
         temp[ 1 ] = Arrays.copyOfRange(this.msValues[1], startIndex, endIndex);
         return temp;
     }
     
-    public double[][] getWindow ( double peakValue, double windowSize ) {
+    public float[][] getWindow ( double peakValue, double windowSize ) {
         int startIndex = peakIndex( peakValue - windowSize );
         int endIndex = peakIndex( peakValue + windowSize );
 
         return getRange( startIndex, endIndex);
     }
     
-    public double getYMax() {
+    public float getYMax() {
         if (msValues == null) return getYMax (0, yvals.length);
         else return getYMax (0, msValues[1].length);
     }
     
-    public double getYMax (int start, int end) {
-        double max;
+    public float getYMax (int start, int end) {
+        float max;
         if (msValues == null) {
             max = yvals[start];
             for (int i = start; i < end; i++) {
@@ -109,7 +105,7 @@ public class MassSpectrum implements Serializable{
         }
     }
     
-    public void smoothSavitzkyGolay (double[] xvals, int window, int degree) {
+    public void smoothSavitzkyGolay (float[] xvals, int window, int degree) {
         SavitzkyGolay sg = new SavitzkyGolay (xvals, yvals, window, degree);
         for (int i = window; i < xvals.length-window; i++) {
             yvals[i] = sg.getSmoothedPoint(i);
@@ -127,7 +123,7 @@ public class MassSpectrum implements Serializable{
                 for (int j = -1*window; j<=window; j++) {
                     sum += yvals[i-j];
                 }
-                yvals[i] = sum/filter;
+                yvals[i] = (float)sum/filter;
                 sum = 0;
             }
         } else {
@@ -135,7 +131,7 @@ public class MassSpectrum implements Serializable{
                 for (int j = -1*window; j<=window; j++) {
                     sum += msValues[1][i-j];
                 }
-            msValues[1][i] = sum/filter;
+            msValues[1][i] = (float)sum/filter;
             sum = 0;
             }
         }

@@ -623,13 +623,13 @@ public class MSReader extends javax.swing.JFrame {
                         "time(min)","" );
                 break;
             case CHROM_TYPE_BPC:
-                double[][] bpc = currentMSC.getBPC();
+                float[][] bpc = currentMSC.getBPC();
                 dataset.addSeries( FormatChange.ArrayToXYSeries(bpc) );
                 chart = Utils.drawChart( dataset, currentMSC.title + " Base Peak Chromatogram",
                         "time(min)","" );
                 break;
             case CHROM_TYPE_EIC:
-                double[][] eic = currentMSC.getEIC(XICrange[0], XICrange[1]);
+                float[][] eic = currentMSC.getEIC(XICrange[0], XICrange[1]);
                 dataset.addSeries(FormatChange.ArrayToXYSeries(eic));
                 chart = Utils.drawChart( dataset, currentMSC.title + 
                         " EIC Range " + String.format("%.2f",XICrange[0]) + "-" + 
@@ -858,8 +858,8 @@ public class MSReader extends javax.swing.JFrame {
            Utils.showMessage("Not a valid input.");
             return;
         }
-        double peakNo = Double.parseDouble(peak.getText());
-        double[][] data = new double [2][];
+        float peakNo = Float.parseFloat(peak.getText());
+        float[][] data = new float [2][];
         if (currentMS.msValues == null) {
             int peakIndex = Utils.binarySearch(currentMSC.mz_values, peakNo);
             stepSize = currentMSC.mz_values[50] - currentMSC.mz_values[49];
@@ -908,8 +908,8 @@ public class MSReader extends javax.swing.JFrame {
             return;
         }
         if (!jTextField1.getText().equals("")) {
-            double time1 = Double.parseDouble(spectrumattime.getText());
-            double time2 = Double.parseDouble(jTextField1.getText());
+            float time1 = Float.parseFloat(spectrumattime.getText());
+            float time2 = Float.parseFloat(jTextField1.getText());
             spectrumattime.setText("");
             jTextField1.setText("");
             int index1 = Utils.binarySearch(currentMSC.TIC[0], time1);
@@ -923,7 +923,7 @@ public class MSReader extends javax.swing.JFrame {
                 return;
             }
         } else {
-            double time = Double.parseDouble(spectrumattime.getText());
+            float time = Float.parseFloat(spectrumattime.getText());
             spectrumattime.setText("");
             
             int tIndex = Utils.binarySearch (currentMSC.TIC[0], time);
@@ -1209,7 +1209,7 @@ public class MSReader extends javax.swing.JFrame {
             @Override
             protected Void doInBackground() throws MzMLUnmarshallerException {
                 int elutionIndex;
-                double [][] eic; 
+                float [][] eic; 
                 String extension = "";
                 for ( File f : files ) {
                     System.out.println("Processing "+f.toString());
@@ -1226,7 +1226,9 @@ public class MSReader extends javax.swing.JFrame {
                     // Iterate through peptides, extract each one from the currently loaded MSChrom
                     for ( int ii = 0; ii < pept.length; ++ii ) {
                         //If zero time point change XIC parameters
-                        if ( Utils.getDeutTimePoint(f.toString()) == 0) eic = currentMSC.getEIC(pept[ii].mz - 1, pept[ii].mz + 1);
+                        if ( Utils.getDeutTimePoint(f.toString()) == 0) {
+                            eic = currentMSC.getEIC(pept[ii].mz - 1, pept[ii].mz + 1);
+                        }
                         // Set XIC parameters as a function of peptide size and total possible deuterons
                         else {
                             eic = currentMSC.getEIC( pept[ ii ].mz - 1, 
@@ -1300,13 +1302,13 @@ public class MSReader extends javax.swing.JFrame {
         cpn.setVisible(true);
         final Peptide pept = cpn.getPeptides()[0];
         if ( pept == null ) return;
-        double[][] eic = currentMSC.getEIC(pept.mz - 1, pept.mz + 1);
+        float[][] eic = currentMSC.getEIC(pept.mz - 1, pept.mz + 1);
         int elutionindex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
         currentMS = currentMSC.spectra[elutionindex];
         currentMS.convertToNonUniform( currentMSC );
         int windowSize = MSReader.getInstance().getIntProperty("windowSize");
         
-        double[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
+        float[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
             
         double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 4));
         

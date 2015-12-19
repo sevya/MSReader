@@ -33,6 +33,10 @@ public class FormatChange {
         for (int i = 0; i < array.length; i++) array[i] = Double.parseDouble(form.format(array[i]));
     }
     
+    public static void FormatArray (float[] array, DecimalFormat form) {
+        for (int i = 0; i < array.length; i++) array[i] = Float.parseFloat(form.format(array[i]));
+    }
+    
     public static Double[] ObjectArraytoDouble ( Object[] array ) {
         Double[] doubArray = new  Double[array.length];
         for ( int i = 0; i < array.length; ++i ) {
@@ -50,7 +54,41 @@ public class FormatChange {
         } return table;
     }
     
+    public static Object[][] ArrayToTable (float [][] array) {
+        Object[][] table = new Object [array[0].length][array.length];
+        for (int i = 0; i < array[0].length; i++) {
+            for (int j = 0; j < array.length; j++) {
+                table[i][j] = array[j][i];
+            }
+        } return table;
+    }
+    
+    public static double[] Float2Double ( float[] array ) {
+        double[] arr2 = new double[array.length];
+        for ( int i = 0; i < array.length; ++i ) arr2[i] = (double)array[i];
+        return arr2;
+    }
+    
+    public static float[] Double2Float ( double[] array ) {
+        float[] arr2 = new float[array.length];
+        for ( int i = 0; i < array.length; ++i ) arr2[i] = (float)array[i];
+        return arr2;
+    }
+    
     public static Object[][] ArrayToTable (double[][] array, NumberFormat xformat, NumberFormat yformat) {
+        Object[][] table = new Object [array[0].length][array.length];
+        for (int i = 0; i < array[0].length; i++) {
+            for (int j = 0; j < array.length; j++) {
+                if ( j == 0 ) { // TODO fix this hack - if you're working on x values use x formatter
+                    table[i][j] = xformat.format( array[j][i] );
+                } else if ( j == 1) {
+                    table[i][j] = yformat.format( array[j][i] );
+                }
+            }
+        } return table;
+    }
+    
+    public static Object[][] ArrayToTable (float[][] array, NumberFormat xformat, NumberFormat yformat) {
         Object[][] table = new Object [array[0].length][array.length];
         for (int i = 0; i < array[0].length; i++) {
             for (int j = 0; j < array.length; j++) {
@@ -107,6 +145,7 @@ public class FormatChange {
         list.add(-2);
         System.out.println(Collections.frequency(list, -2)==2);
     }
+    
     public static XYSeries ArrayToXYSeries (double[][] values) {
         if (values.length != 2) throw new InvalidParameterException();
         return ArrayToXYSeries(values[0], values[1], 0, values[0].length, "");
@@ -143,6 +182,46 @@ public class FormatChange {
     }
     
     public static XYSeries ArrayToXYSeries (double[][] values, int startIndex, int endIndex, String key) {
+        if (values.length != 2) throw new InvalidParameterException();
+        return ArrayToXYSeries (values[0], values[1], startIndex, endIndex, key);
+    }
+    
+    public static XYSeries ArrayToXYSeries (float[][] values) {
+        if (values.length != 2) throw new InvalidParameterException();
+        return ArrayToXYSeries(values[0], values[1], 0, values[0].length, "");
+    }
+    
+    public static XYSeries ArrayToXYSeries (float[][] values, String key) {
+        if (values.length != 2) throw new InvalidParameterException();
+        return ArrayToXYSeries (values[0], values[1], 0, values[0].length, key);
+    }
+    
+    public static XYSeries ArrayToXYSeries (float[] xvals, float[] yvals) {
+        return ArrayToXYSeries (xvals, yvals, 0, xvals.length, "");
+    }
+    
+    public static XYSeries ArrayToXYSeries (float[] xvals, float[] yvals, String str) {
+        return ArrayToXYSeries (xvals, yvals, 0, xvals.length, str);
+    }
+    
+    public static XYSeries ArrayToXYSeries (float[] xvals, float[] yvals, int start, int end) {
+        return ArrayToXYSeries (xvals, yvals, start, end, "");
+    }
+    
+    public static XYSeries ArrayToXYSeries (float[] xvals, float[] yvals, int start, int end, String key) {
+        if (xvals.length != yvals.length) throw new InvalidParameterException();
+        XYSeries series = new XYSeries(key);
+        for (int i = start; i < end; i++) {
+            series.add(xvals[i], yvals[i]);
+        } return series;
+    }
+    
+    public static XYSeries ArrayToXYSeries (float[][] values, int startIndex, int endIndex) {
+        if (values.length != 2) throw new InvalidParameterException();
+        return ArrayToXYSeries (values[0], values[1], startIndex, endIndex, "");
+    }
+    
+    public static XYSeries ArrayToXYSeries (float[][] values, int startIndex, int endIndex, String key) {
         if (values.length != 2) throw new InvalidParameterException();
         return ArrayToXYSeries (values[0], values[1], startIndex, endIndex, key);
     }
@@ -218,6 +297,19 @@ public class FormatChange {
         for (int i = 0; i < al.size(); i++) {
             try {
                 ex[i] = (double)al.get(i);
+            } catch (Exception e) { 
+                return null;
+            }
+        }
+        return ex;
+    }
+    
+    public static float[] ArraylistToArrayFloat (List<Float> al) 
+            throws NumberFormatException{
+        float [] ex = new float [al.size()];
+        for (int i = 0; i < al.size(); i++) {
+            try {
+                ex[i] = (float)al.get(i);
             } catch (Exception e) { 
                 return null;
             }

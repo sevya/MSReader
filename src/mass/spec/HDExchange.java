@@ -199,7 +199,7 @@ public class HDExchange implements Serializable {
             }
             
             int windowSize = MSReader.getInstance().getIntProperty("windowSize");
-            double[][] dataRange = scan.getWindow( peptide.mz, windowSize );
+            float[][] dataRange = scan.getWindow( peptide.mz, windowSize );
             
             if ( Utils.getDeutTimePoint( scan.getRunTitle() ) == -1 ) {
                 Utils.showErrorMessage( "Error: file "+scan.getRunTitle()+" is named "

@@ -17,8 +17,8 @@ centroid mass from zero time point, and deuteration per residue.
 public class HDExchangeTimePoint {
     
     Exchange_Popup window_;
-    private double[][] dataRange_;
-    private double[][] tempData_;
+    private float[][] dataRange_;
+    private float[][] tempData_;
     private double centroid_;
     private final double timePoint_;
     private double retentionTime_;
@@ -26,7 +26,7 @@ public class HDExchangeTimePoint {
     private final int idNumber_;
     
     public HDExchangeTimePoint ( //Exchange_Popup window, 
-            HDExchange par, double[][] range, double timePoint, double retentionTime, int id_number ) {
+            HDExchange par, float[][] range, double timePoint, double retentionTime, int id_number ) {
         parent = par;
         dataRange_ = range;
         timePoint_ = timePoint;
@@ -43,9 +43,9 @@ public class HDExchangeTimePoint {
     public void showWindow () {
         window_.setVisible(true);
     }
-    public void setData ( double[][] range ) { dataRange_= range; }
+    public void setData ( float[][] range ) { dataRange_= range; }
     
-    public double[][] getData () { return dataRange_; }
+    public float[][] getData () { return dataRange_; }
     
     public double getCentroid () { return centroid_; }
     
@@ -54,7 +54,7 @@ public class HDExchangeTimePoint {
     public Integer getIDNumber () { return idNumber_; }
     
     private void backUpData () { 
-        tempData_ = new double [ 2 ][];
+        tempData_ = new float [ 2 ][];
         tempData_[ 0 ] = Arrays.copyOfRange( dataRange_[ 0 ], 0, dataRange_[ 0 ].length );
         tempData_[ 1 ] = Arrays.copyOfRange( dataRange_[ 1 ], 0, dataRange_[ 1 ].length );
     }
@@ -136,7 +136,7 @@ public class HDExchangeTimePoint {
         window_.setTitle(score+"");
         
         if (score < .5) throw new NoPeakDetectedException("No peak detected - does not match input peptide");
-        int start = Utils.binarySearch ( dataRange_[0], tope[0][0] );
+        int start = Utils.binarySearch ( dataRange_[0], (float)tope[0][0] );
         
         int beforeindex = 0;
         max = MSMath.getMax( dataRange_[ 1 ] );
@@ -148,7 +148,7 @@ public class HDExchangeTimePoint {
             } 
         }
         
-        int after = Utils.binarySearch (dataRange_[0], tope[0][endindex]);
+        int after = Utils.binarySearch (dataRange_[0], (float)tope[0][endindex]);
         int afterindex = dataRange_[0].length;
         for (int i = after; i < dataRange_[0].length; i++) {
             if (dataRange_[1][i] < lowerthresh) {
@@ -161,7 +161,7 @@ public class HDExchangeTimePoint {
         return new int[] {beforeindex, afterindex};
     } 
      
-     private double getShift (double[][] data, double[][] isotope) {
+     private double getShift (float[][] data, double[][] isotope) {
         int counter = 1;
         double score = MSMath.getScore(data, isotope);
         double maxscore = score;

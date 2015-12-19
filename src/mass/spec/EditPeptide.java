@@ -4,7 +4,7 @@ class EditPeptide extends javax.swing.JDialog {
 
         String pep;
         int Z;
-        double eT;
+        float eT;
         
         public EditPeptide(java.awt.Frame parent, boolean modal) {
             super(parent, modal);
@@ -112,7 +112,7 @@ class EditPeptide extends javax.swing.JDialog {
          try {
             pep = sequence.getText();
             Z = Integer.parseInt(charge.getText());
-            eT = Double.parseDouble(elutiontime.getText());
+            eT = Float.parseFloat(elutiontime.getText());
             dispose();
         } catch (Exception e) {
             Utils.showErrorMessage("Invalid input");

@@ -316,9 +316,9 @@ public class SequenceEngine extends javax.swing.JFrame {
                 Utils.showErrorMessage ("Invalid time range");
                 return;
             }
-            double time1 = Double.parseDouble(timeRange1.getText());
+            float time1 = Float.parseFloat(timeRange1.getText());
             timeIndex1 = Utils.binarySearch(c.TIC[0], time1);
-            double time2 = Double.parseDouble(timeRange2.getText());
+            float time2 = Float.parseFloat(timeRange2.getText());
             timeIndex2 = Utils.binarySearch(c.TIC[0], time2);
         }
         
@@ -460,8 +460,8 @@ class SequenceSpectrum implements Runnable {
     }
     
     private void sequence_spectrum (int index) {
-        ArrayList<Double> peaks = new ArrayList(); 
-        double time = engine.c.TIC[0][index];
+        ArrayList<Float> peaks = new ArrayList(); 
+        float time = engine.c.TIC[0][index];
         MassSpectrum ms = engine.c.spectra[index];
         peaks.clear();
         if (engine.c.SPECTRA_UNIFORM) {
@@ -473,7 +473,7 @@ class SequenceSpectrum implements Runnable {
                 if (ms.msValues[1][k] > engine.threshold) peaks.add(ms.msValues[0][k]);
             }
         }
-        for (Double peak: peaks) {
+        for (Float peak: peaks) {
             for (String frag: engine.fragments) {
                 for (int k = 1; k < 50; k++) {
                     double mwapprox = (MSMath.mwEstimate(frag)+k)/k;
@@ -502,10 +502,12 @@ class SequenceSpectrum implements Runnable {
                         double max = ms.getYMax (startIndex, endIndex);
                         max /= MSMath.getMax(isotope[1]);
                         for (int f = 0; f < isotope[1].length; f++) isotope[1][f] = isotope[1][f] * max;
-                        double[][] data = new double [2][];
-                        data[0] =  (engine.c.SPECTRA_UNIFORM) ? Arrays.copyOfRange(engine.c.mz_values, startIndex, endIndex) 
+                        float[][] data = new float [2][];
+                        data[0] =  (engine.c.SPECTRA_UNIFORM) ? 
+                                Arrays.copyOfRange(engine.c.mz_values, startIndex, endIndex) 
                                 : Arrays.copyOfRange(ms.msValues[0], startIndex, endIndex);
-                        data[1] =  (engine.c.SPECTRA_UNIFORM) ? Arrays.copyOfRange(ms.yvals, startIndex, endIndex) 
+                        data[1] =  (engine.c.SPECTRA_UNIFORM) ? 
+                                Arrays.copyOfRange(ms.yvals, startIndex, endIndex) 
                                 : Arrays.copyOfRange(ms.msValues[1], startIndex, endIndex);
                         double score = MSMath.getScore(data, isotope);
                         if (score > .75) {

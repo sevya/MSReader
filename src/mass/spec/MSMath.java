@@ -15,6 +15,10 @@ public class MSMath {
         return min;
     }
     
+    public static float getMax (float[] data) {
+        return getMax (data, 0, data.length);
+    }
+    
     public static double getMax (double[] data) {
         return getMax (data, 0, data.length);
     }
@@ -43,6 +47,14 @@ public class MSMath {
             }
         }
         return maxind;
+    }
+    
+    public static float getMax (float[] data, int start, int end) {
+        float max = Float.MIN_VALUE;
+        for (int i = start; i < end; i++) {
+            if (data[i] > max) max = data[i];
+        }
+        return max;
     }
     
     public static double getMax (double[] data, int start, int end) {
@@ -80,7 +92,16 @@ public class MSMath {
                 ysum += data[1][i];
             }
           return (xysum/ysum);
-      }
+    }
+    
+    public static double calcCentroid (float [][] data) {
+          double xysum = 0, ysum = 0; 
+          for (int i = 0; i<data[0].length; i++) {
+                xysum += data[0][i] * data[1][i];
+                ysum += data[1][i];
+            }
+          return (xysum/ysum);
+    }
     
     public static double mwEstimate(String seq) {
         double sum = 0;
@@ -101,7 +122,7 @@ public class MSMath {
         return max;
     }
        
-    public static double getScore (double[][] data, double[][] isotope) {
+    public static double getScore (float[][] data, double[][] isotope) {
         isotope = Utils.sort2DArray(isotope, 0);
         double sum = 0;
         int index = 0;

@@ -17,7 +17,7 @@ public class Peptide implements Serializable {
     int charge;
     double MW;
     double mz;
-    double elutiontime;
+    float elutiontime;
     int[] element_composition = new int[5];
     Random rand;
     static final long serialVersionUID = 35364321;
@@ -27,7 +27,7 @@ public class Peptide implements Serializable {
     static int OPTIMUM_THREAD_NO = 5;
     double modification;
     
-    public Peptide (String str, int z, double elution) {
+    public Peptide (String str, int z, float elution) {
         if (str.length() < 1) throw new NullPointerException();
         displaySequence = str;
         sequence = Utils.trimPeptide(str);
@@ -215,9 +215,9 @@ public class Peptide implements Serializable {
     
     
     public static void main (String[] args) {
-       Peptide pept = new Peptide("GVSSACPYQGKSSF", 1, 8.32);
+       Peptide pept = new Peptide("GVSSACPYQGKSSF", 1, 8.32f);
        System.out.println(pept.mz);
-       pept = new Peptide("GVSSACP(+0.997)YQGKSSF", 1, 8.32);
+       pept = new Peptide("GVSSACP(+0.997)YQGKSSF", 1, 8.32f);
        System.out.println(pept.mz);
     }
 }

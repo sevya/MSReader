@@ -479,7 +479,7 @@ public class ViewPeptides extends javax.swing.JDialog {
                         try {
                             Peptide pept = new Peptide (tiago[0],
                                     Integer.parseInt(tiago[2]), 
-                                    Double.parseDouble(tiago[3]));
+                                    Float.parseFloat(tiago[3]));
                             peptArray.add( pept );
                         } catch ( Exception e ) {
                             e.printStackTrace();
@@ -519,14 +519,14 @@ public class ViewPeptides extends javax.swing.JDialog {
         msr.chromatogramType = MSReader.chromType.CHROM_TYPE_EIC;
         Peptide pept = msr.getPeptides().elementAt(index);
         MSChrom currentMSC = MSReader.getInstance().currentMSC;
-        double[][] eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
+        float[][] eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
         int elutionindex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
         MassSpectrum currentMS = currentMSC.spectra[elutionindex];
 
         currentMS.convertToNonUniform( currentMSC );
         int windowSize = MSReader.getInstance().getIntProperty("windowSize");
         
-        double[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
+        float[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
             
         double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 5));
         

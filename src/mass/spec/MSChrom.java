@@ -20,9 +20,9 @@ import uk.ac.ebi.jmzml.xml.io.MzMLUnmarshallerException;
 
 public class MSChrom {
     String title;
-    double[] mz_values;
+    float[] mz_values;
     MassSpectrum[] spectra;
-    double[][] TIC;
+    float[][] TIC;
     String path;
     Array scan_acquisition_time;
     Array total_intensity;
@@ -105,10 +105,10 @@ public class MSChrom {
         Number[] time = chrom.getBinaryDataArrayList().getBinaryDataArray().get(0).getBinaryDataAsNumberArray();
         Number[] intensity = chrom.getBinaryDataArrayList().getBinaryDataArray().get(1).getBinaryDataAsNumberArray();
 
-        TIC = new double[2][time.length];
+        TIC = new float[2][time.length];
         for (int i = 0; i < time.length; i++) {
-            TIC[ 0 ][ i ] = time[ i ].doubleValue();
-            TIC[ 1 ][ i ] = intensity[ i ].doubleValue();
+            TIC[ 0 ][ i ] = time[ i ].floatValue();
+            TIC[ 1 ][ i ] = intensity[ i ].floatValue();
         }
         System.out.println(TIC[0].length);
         
@@ -156,10 +156,10 @@ public class MSChrom {
         }
     }
     
-    private double[][] getTICFromCDF () {
-        double tic[][] = new double [2][];
-        tic[0] = (double[])scan_acquisition_time.get1DJavaArray(double.class);
-        tic[1] = (double[])total_intensity.get1DJavaArray(double.class);
+    private float[][] getTICFromCDF () {
+        float tic[][] = new float[2][];
+        tic[0] = (float[])scan_acquisition_time.get1DJavaArray(double.class);
+        tic[1] = (float[])total_intensity.get1DJavaArray(double.class);
         for (int i = 0; i < tic[0].length; i++) {
             tic[0][i] /= 60;
         }
@@ -173,10 +173,10 @@ public class MSChrom {
         int fileNo = 0;
         if (SPECTRA_UNIFORM) {
             int msLength = getMSLength(mass_values, 0);
-            mz_values = new double [msLength+1];
+            mz_values = new float [msLength+1];
             arraycopy(mass_values, 0, mz_values, msLength+1);
             int startPt = 0;
-            double[] yvals = new double [msLength+1]; 
+            float[] yvals = new float [msLength+1]; 
             while (startPt + msLength < intensity_values.getSize()) {
                 arraycopy(intensity_values, startPt, yvals, msLength+1);
                 current = new MassSpectrum (yvals, "Elution: "+myformat.format(TIC[0][fileNo++]) + "min");
@@ -186,12 +186,12 @@ public class MSChrom {
             }
         } else {
             int msLength = getMSLength(mass_values, 0);
-            double[] xvals;
-            double[] yvals;
+            float[] xvals;
+            float[] yvals;
             int startPt = 0;
             while (startPt + msLength < intensity_values.getSize()) {
-                xvals = new double[msLength+1];
-                yvals = new double[msLength+1];
+                xvals = new float[msLength+1];
+                yvals = new float[msLength+1];
                 arraycopy(mass_values, startPt, xvals, msLength+1);
                 arraycopy(intensity_values, startPt, yvals, msLength+1);
                 current = new MassSpectrum(xvals, yvals, this.title, "Elution: " + myformat.format(TIC[0][fileNo++])  + "min");
@@ -208,10 +208,11 @@ public class MSChrom {
         MzMLUnmarshaller unmarshaller;
         int start, end;
         MassSpectrum[] spectra;
-        double[] time;
+        float[] time;
         String msChromParentTitle;
         
-        public MZMLconverter (MzMLUnmarshaller unmarsh, int s, int e, MassSpectrum[] spec, double[] t, String parentTitle) {
+        public MZMLconverter (MzMLUnmarshaller unmarsh, int s, int e, 
+                MassSpectrum[] spec, float[] t, String parentTitle) {
             unmarshaller = unmarsh;
             start = s;
             end = e;
@@ -234,12 +235,12 @@ public class MSChrom {
                     Number[] mz = bda.get(0).getBinaryDataAsNumberArray();
                     Number[] intensity = bda.get(1).getBinaryDataAsNumberArray();
 
-                    double[] mz_values = new double[mz.length];
-                    double[] intensity_values = new double[intensity.length];
+                    float[] mz_values = new float[mz.length];
+                    float[] intensity_values = new float[intensity.length];
                     
                     for (int j = 0; j < mz_values.length; j++) {
-                        mz_values[j] = mz[j].doubleValue();
-                        intensity_values[j] = intensity[j].doubleValue();
+                        mz_values[j] = mz[j].floatValue();
+                        intensity_values[j] = intensity[j].floatValue();
                     }
 
                     spectra[i] = new MassSpectrum(mz_values, intensity_values, 
@@ -279,10 +280,10 @@ public class MSChrom {
         return true;
     }
     
-    private void arraycopy (Array array, int start1, double[] dest, int length) {
+    private void arraycopy (Array array, int start1, float[] dest, int length) {
         int counter = 0;
         for (int i = start1; i < start1 + length; i++) {
-            dest[counter++] = array.getDouble(i);
+            dest[counter++] = array.getFloat(i);
         } 
     }
     
@@ -295,21 +296,21 @@ public class MSChrom {
         return -1;
     }
     
-    private void graphTIC () {
-        new Plotter(FormatChange.ArrayToXYSeries(TIC, "TIC")).display();
-        
-    }
+//    private void graphTIC () {
+//        new Plotter(FormatChange.ArrayToXYSeries(TIC, "TIC")).display();
+//        
+//    }
+//    
+//    private void graphSpectrum (int index) {
+//        double[][] data = new double[2][];
+//        MassSpectrum ms = spectra[index];
+//        data[0] = mz_values;
+//        data[1] = ms.yvals;
+//        new Plotter(data).display();
+//    }
     
-    private void graphSpectrum (int index) {
-        double[][] data = new double[2][];
-        MassSpectrum ms = spectra[index];
-        data[0] = mz_values;
-        data[1] = ms.yvals;
-        new Plotter(data).display();
-    }
-    
-    public double[][] getEIC (double startion, double endion) {
-        double[][] EIC = new double[2][TIC[0].length];
+    public float[][] getEIC (double startion, double endion) {
+        float[][] EIC = new float[2][TIC[0].length];
         EIC[0] = Arrays.copyOf(TIC[0], EIC[0].length);
         MassSpectrum currMS;
         if (SPECTRA_UNIFORM) {
@@ -335,8 +336,8 @@ public class MSChrom {
         return EIC;
     }
     
-    public double[][] getBPC () {
-        double[][] bpc = new double[2][TIC[1].length];
+    public float[][] getBPC () {
+        float[][] bpc = new float[2][TIC[1].length];
         bpc[0] = TIC[0];
         for (int i = 0; i < spectra.length; i++) {
             bpc[1][i] = spectra[i].getYMax();
@@ -344,9 +345,9 @@ public class MSChrom {
         return bpc;
     }
     
-    public int getElutionIndexFromEIC (double[][] eic, double time) {
-        int startindex = Utils.binarySearch (eic[0], time - .5);
-        int endindex = Utils.binarySearch (eic[0], time + .5);
+    public int getElutionIndexFromEIC (float[][] eic, float time) {
+        int startindex = Utils.binarySearch (eic[0], (float)(time - 0.5));
+        int endindex = Utils.binarySearch (eic[0], (float)(time + 0.5));
         double max = -1;
         int maxindex = -1;
         for (int i = startindex; i < endindex; i++) {
@@ -358,7 +359,7 @@ public class MSChrom {
         return maxindex;
     }
     
-    public int[] getElutionIndicesFromEIC (double[][] eic, double time) {
+    public int[] getElutionIndicesFromEIC (float[][] eic, float time) {
         int max = getElutionIndexFromEIC(eic, time);
         int[] indices = new int[2];
         for (int i = max; i > 1; i--) {
@@ -444,14 +445,15 @@ public class MSChrom {
         if (SPECTRA_UNIFORM) {
             if (start == end) return spectra[start];
             int length = mz_values.length;
-            double[] vals = new double[length];
-            Arrays.fill(vals, 0.0);
+            float[] vals = new float[length];
+            Arrays.fill(vals, 0.0f);
             for (int i = start; i < end; i++) {
                 for (int j = 0; j < length; j++) {
                     vals[j] += spectra[i].yvals[j];
                 }
             }
-            MassSpectrum ms = new MassSpectrum (vals, spectra[start].msTitle + " to " + spectra[end].msTitle);
+            MassSpectrum ms = new MassSpectrum (vals, 
+                    spectra[start].msTitle + " to " + spectra[end].msTitle);
             ms.runTitle = title;
             return ms;
         } else {
