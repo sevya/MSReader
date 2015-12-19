@@ -129,15 +129,17 @@ public class Utils {
             ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
             temp = ois.readObject();
             if (!(temp instanceof HDRun)) {
-                Utils.showErrorMessage("Error: one or more files are invalid");
+                Utils.showErrorMessage("Error: file "+file.toString()+" is invalid");
                 return null;
             }
             hdr = (HDRun)temp;
             ois.close();
         } catch (IOException ex) {
-            Utils.showErrorMessage("Error: one or more files are invalid");
+                Utils.showErrorMessage("Error: file "+file.toString()+" is invalid");
+            return null;
         } catch (ClassNotFoundException e) {
-            Utils.showErrorMessage("Error: one or more files are invalid");
+                Utils.showErrorMessage("Error: file "+file.toString()+" is invalid");
+            return null;
         }
         return hdr;
     }

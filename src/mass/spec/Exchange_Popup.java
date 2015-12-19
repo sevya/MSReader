@@ -202,7 +202,6 @@ public class Exchange_Popup extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void removeTimePointActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeTimePointActionPerformed
-        // TODO write code to remove this time point
         parent.removeTimePoint();
         this.dispose();
     }//GEN-LAST:event_removeTimePointActionPerformed

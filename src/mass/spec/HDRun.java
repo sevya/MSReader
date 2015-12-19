@@ -64,14 +64,6 @@ public class HDRun implements Serializable{
         exchangeValues[ 0 ] = Utils.doubleToObject( values[ 0 ] );
         exchangeValues[ 1 ] = Utils.doubleToObject( values[ 1 ] );
     }
-    
-//    public HDRun(HDX_Form txf) {
-//        title = txf.title;
-//        exchangeValues = MSReader.getHDExchangeInstancetxf.parent.exchange.getTable();
-//        A = txf.a;
-//        K = txf.k;
-//        peptide = txf.peptide;
-//    }
 
     public void setTitle(String t) {
         title = t;

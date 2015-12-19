@@ -110,8 +110,8 @@ public class PeptideList implements Serializable {
                 Collections.sort(elements, new Comparator<Peptide>() {
                     @Override
                     public int compare(Peptide o1, Peptide o2) {
-                        if (o1.elutiontime > o2.elutiontime) return 1;
-                        else if (o1.elutiontime < o2.elutiontime) return -1;
+                        if (o1.retentionTime > o2.retentionTime) return 1;
+                        else if (o1.retentionTime < o2.retentionTime) return -1;
                         else return 0;
                     }
                 });
@@ -121,7 +121,7 @@ public class PeptideList implements Serializable {
     
     private void print () {
         for (int i = 0; i < elements.size(); i++) {
-            System.out.println(elements.get(i).displaySequence+"\t"+elements.get(i).mz+"\t"+elements.get(i).charge+"\t"+elements.get(i).elutiontime);
+            System.out.println(elements.get(i).displaySequence+"\t"+elements.get(i).mz+"\t"+elements.get(i).charge+"\t"+elements.get(i).retentionTime);
         }
     }
 }

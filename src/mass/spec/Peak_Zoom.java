@@ -289,7 +289,7 @@ public class Peak_Zoom extends javax.swing.JFrame {
 
     private void updateTable() {
         DefaultTableModel table = new DefaultTableModel( FormatChange.ArrayToTable(
-            data, new DecimalFormat("###.##"), new DecimalFormat("0.0E0") ),
+            data, new DecimalFormat[] { new DecimalFormat("###.##"), new DecimalFormat("0.0E0")} ),
             new String[] {"m/z", "intensity"});
         jTable1.setModel( table );
     }

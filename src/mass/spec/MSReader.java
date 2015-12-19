@@ -993,6 +993,7 @@ public class MSReader extends javax.swing.JFrame {
         HDRun[] hdr = new HDRun[files.length];
         for (int i = 0; i < files.length; i++) {
             hdr[ i ] = Utils.readHDRun( files[ i ] );
+            if ( hdr[i] == null ) return;
         }
         if (hdr.length > 15) {
             Utils.showErrorMessage("Cannot overlay more than 15 HDX files at once");
@@ -1233,7 +1234,8 @@ public class MSReader extends javax.swing.JFrame {
                                     pept[ ii ].mz + pept[ ii ].maxDeuteration()*2/3 );
                         }
 
-                        elutionIndex = currentMSC.getElutionIndexFromEIC(eic, pept[ii].elutiontime);
+                        // TODO - peptide RT should be a float but this messes up my serialized objects
+                        elutionIndex = currentMSC.getElutionIndexFromEIC(eic, (float)pept[ii].retentionTime);
                         
                         currentMS = currentMSC.spectra[ elutionIndex ];
                         
@@ -1301,7 +1303,8 @@ public class MSReader extends javax.swing.JFrame {
         final Peptide pept = cpn.getPeptides()[0];
         if ( pept == null ) return;
         float[][] eic = currentMSC.getEIC(pept.mz - 1, pept.mz + 1);
-        int elutionindex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
+        // TODO - peptide RT should be in float but this messes up my serialized objects
+        int elutionindex = currentMSC.getElutionIndexFromEIC(eic, (float)pept.retentionTime);
         currentMS = currentMSC.spectra[elutionindex];
         currentMS.convertToNonUniform( currentMSC );
         int windowSize = MSReader.getInstance().getIntProperty("windowSize");

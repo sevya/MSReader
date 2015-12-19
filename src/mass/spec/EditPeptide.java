@@ -16,7 +16,8 @@ class EditPeptide extends javax.swing.JDialog {
             sequence.setText(pep);
             Z = p.charge;
             charge.setText(""+Z);
-            eT = p.elutiontime;
+            // TODO - peptide RT should be in float but this messes up my serialized objects
+            eT = (float)p.retentionTime;
             elutiontime.setText(""+eT);
         }
     

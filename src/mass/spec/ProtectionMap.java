@@ -3,7 +3,6 @@ package mass.spec;
 import java.awt.Color;
 import java.io.*;
 import java.util.*;
-import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;

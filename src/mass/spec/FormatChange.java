@@ -81,15 +81,11 @@ public class FormatChange {
         } return table;
     }
     
-    public static Object[][] ArrayToTable (float[][] array, NumberFormat xformat, NumberFormat yformat) {
+    public static Object[][] ArrayToTable (float[][] array, NumberFormat[] formats) {// xformat, NumberFormat yformat) {
         Object[][] table = new Object [array[0].length][array.length];
         for (int i = 0; i < array[0].length; i++) {
             for (int j = 0; j < array.length; j++) {
-                if ( j == 0 ) { // TODO fix this hack - if you're working on x values use x formatter
-                    table[i][j] = xformat.format( array[j][i] );
-                } else if ( j == 1) {
-                    table[i][j] = yformat.format( array[j][i] );
-                }
+                table[i][j] = formats[j].format(array[j][i]);
             }
         } return table;
     }
@@ -264,7 +260,7 @@ public class FormatChange {
             ex[i][0] = pept.displaySequence;
             ex[i][1] = form.format(pept.mz);
             ex[i][2] = pept.charge;
-            ex[i][3] = pept.elutiontime;
+            ex[i][3] = pept.retentionTime;
         }
         return new DefaultTableModel(ex, t.labels);
     }

@@ -18,7 +18,6 @@ public class HDX_Form extends javax.swing.JFrame {
    private Peptide peptide_;
    double a = 0, k = 0;
    HDExchange parent;
-//   MSReader parent;
    DecimalFormat akformat = new DecimalFormat("###.###");
      
    public HDX_Form () {
@@ -55,7 +54,7 @@ public class HDX_Form extends javax.swing.JFrame {
        peptide_ = hdruns[ 0 ].getPeptide();
        zstate.setText( Integer.toString( peptide_.charge ) );
        residues.setText( Integer.toString( peptide_.sequence.length() ) );
-       plotHDRuns( hdruns );
+       plotHDRunsNew( hdruns );
 //       updateAll();
    }
    
@@ -132,8 +131,28 @@ public class HDX_Form extends javax.swing.JFrame {
     public Peptide getPeptide() { return peptide_; }
 
     public void plotHDRunsNew ( HDRun[] hdruns ) {
-        
+        expandGraph();
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        for ( HDRun hdrun : hdruns ) {
+            dataset.addSeries( hdrun.toXYSeries() );
+        }
+        String charttitle = (hdruns.length == 1) ? hdruns[0].title : "";
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                charttitle,
+                "time (min)",
+                "% deuteration",
+                dataset,
+                PlotOrientation.VERTICAL,
+                true,
+                true,
+                false
+                );
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setPreferredSize(new java.awt.Dimension(700, 250));
+        jPanel1.removeAll();
+        jPanel1.add(chartPanel, BorderLayout.CENTER);
     }
+    
     public void plotHDRuns ( HDRun[] hdruns ) {
         expandGraph();
         XYSeriesCollection dataset = new XYSeriesCollection();

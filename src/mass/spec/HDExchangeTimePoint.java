@@ -85,8 +85,9 @@ public class HDExchangeTimePoint {
     
     public DefaultTableModel getDataAsTable () {
         DefaultTableModel table = new DefaultTableModel ( 
-                FormatChange.ArrayToTable( dataRange_, new DecimalFormat("###.##"), new DecimalFormat("0.0E0") ), 
-                new String[] {"m/z", "intensity"} 
+            FormatChange.ArrayToTable( dataRange_, 
+            new DecimalFormat[] { new DecimalFormat("###.##"), new DecimalFormat("0.0E0") } ), 
+            new String[] {"m/z", "intensity"} 
         );
         return table;
     }

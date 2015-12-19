@@ -520,7 +520,8 @@ public class ViewPeptides extends javax.swing.JDialog {
         Peptide pept = msr.getPeptides().elementAt(index);
         MSChrom currentMSC = MSReader.getInstance().currentMSC;
         float[][] eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
-        int elutionindex = currentMSC.getElutionIndexFromEIC(eic, pept.elutiontime);
+        // TODO - peptide RT should be in float but this messes up my serialized objects
+        int elutionindex = currentMSC.getElutionIndexFromEIC(eic, (float)pept.retentionTime);
         MassSpectrum currentMS = currentMSC.spectra[elutionindex];
 
         currentMS.convertToNonUniform( currentMSC );

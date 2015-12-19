@@ -17,7 +17,7 @@ public class Peptide implements Serializable {
     int charge;
     double MW;
     double mz;
-    float elutiontime;
+    double retentionTime;
     int[] element_composition = new int[5];
     Random rand;
     static final long serialVersionUID = 35364321;
@@ -27,12 +27,12 @@ public class Peptide implements Serializable {
     static int OPTIMUM_THREAD_NO = 5;
     double modification;
     
-    public Peptide (String str, int z, float elution) {
+    public Peptide (String str, int z, double retention) {
         if (str.length() < 1) throw new NullPointerException();
         displaySequence = str;
         sequence = Utils.trimPeptide(str);
         charge = z;
-        elutiontime = elution;
+        retentionTime = retention;
         getElementComposition();
         MW = getMolecularWeight();
         mz = (MW+z)/z;
@@ -215,9 +215,9 @@ public class Peptide implements Serializable {
     
     
     public static void main (String[] args) {
-       Peptide pept = new Peptide("GVSSACPYQGKSSF", 1, 8.32f);
+       Peptide pept = new Peptide("GVSSACPYQGKSSF", 1, 8.32);
        System.out.println(pept.mz);
-       pept = new Peptide("GVSSACP(+0.997)YQGKSSF", 1, 8.32f);
+       pept = new Peptide("GVSSACP(+0.997)YQGKSSF", 1, 8.32);
        System.out.println(pept.mz);
     }
 }
@@ -296,35 +296,6 @@ class DistributionCalc implements Runnable {
                 prob_vector.set( index, prob_vector.get( index ) + frequency );
             }
         }
-    }
-    private double carbon () {
-        if (rand.nextInt(10000) < 107) return 13.0033548378; 
-        else return 12.0;
-    }
-    
-    private double hydrogen () {
-        if (rand.nextInt(1000000) < 115) return 2.0141017780;
-        else return 1.007825;
-    }
-
-    private double nitrogen () {
-        if (rand.nextInt(100000) < 368) return 15.0001088984;
-        else return 14.0030740052;
-    }
-    
-    private double oxygen () {
-       int outcome = rand.nextInt(100000);
-       if (outcome < 38) return 16.9991312;
-       else if (outcome < 243) return 17.999159;
-       else return 15.994915; 
-    }
-    
-    private double sulfur () {
-       int outcome = rand.nextInt(10000);
-       if (outcome < 2) return 35.96708062;
-       else if (outcome < 78) return 32.97145843;
-       else if (outcome < 507) return 33.96786665;
-       else return 31.9720707; 
     }
 }
 

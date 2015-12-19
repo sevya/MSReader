@@ -402,7 +402,7 @@ public class SequenceEngine extends javax.swing.JFrame {
             out.println("====================");
             out.println("Sequence\tM/z\tCharge\tElution time");
             for (Peptide pept: high_score_matches) {
-                out.println(pept.sequence+"\t"+pept.mz+"\t"+pept.charge+"\t"+pept.elutiontime);
+                out.println(pept.sequence+"\t"+pept.mz+"\t"+pept.charge+"\t"+pept.retentionTime);
             }
             out.close();
         } catch (IOException e) {
