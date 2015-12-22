@@ -402,7 +402,7 @@ public class SequenceEngine extends javax.swing.JFrame {
             out.println("====================");
             out.println("Sequence\tM/z\tCharge\tElution time");
             for (Peptide pept: high_score_matches) {
-                out.println(pept.sequence+"\t"+pept.mz+"\t"+pept.charge+"\t"+pept.retentionTime);
+                out.println(pept.sequence+"\t"+pept.mz+"\t"+pept.charge+"\t"+pept.elutiontime);
             }
             out.close();
         } catch (IOException e) {
@@ -498,7 +498,7 @@ class SequenceSpectrum implements Runnable {
                             endIndex = peakIndex + (int) (10/stepSize);
                             if (endIndex >= ms.msValues[0].length) endIndex = ms.msValues[0].length - 1; 
                         }
-                        double[][] isotope = temp.getThreadedDistribution((int)Math.pow(10, 4));
+                        double[][] isotope = temp.getDistribution((int)Math.pow(10, 5), true, true);
                         double max = ms.getYMax (startIndex, endIndex);
                         max /= MSMath.getMax(isotope[1]);
                         for (int f = 0; f < isotope[1].length; f++) isotope[1][f] = isotope[1][f] * max;

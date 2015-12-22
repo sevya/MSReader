@@ -47,6 +47,13 @@ public class MSChrom {
         convertCDF(f.toString());
     }
     
+    ///@brief Direct constructor for new MZML parser
+    public MSChrom( float[][] tic, MassSpectrum[] spectraArray, String Title ) {
+        TIC = tic;
+        spectra = spectraArray;
+        title = Title;
+    }
+    
     public MSChrom (File f, String type) 
             throws MzMLUnmarshallerException {
         path = f.getAbsolutePath();
@@ -118,11 +125,8 @@ public class MSChrom {
             }
         }
         
+        
         if ( !multiproc ) {
-            MZMLconverter converter = new MZMLconverter( unmarshaller, 0, objectCount,
-            spectra, TIC[0], this.title, SPECTRA_UNIFORM);
-            converter.run();
-        } else {
             int no_threads = Runtime.getRuntime().availableProcessors();
             Thread[] threads = new Thread[no_threads+1];
 
@@ -141,6 +145,10 @@ public class MSChrom {
                     ex.printStackTrace();
                 }
             }
+        } else {
+            MZMLconverter converter = new MZMLconverter( unmarshaller, 0, objectCount,
+                spectra, TIC[0], this.title, SPECTRA_UNIFORM);
+            converter.run();
         }
     }
     
@@ -257,7 +265,6 @@ public class MSChrom {
                     } else {
                        Number[] mz = bda.get(0).getBinaryDataAsNumberArray();
                        Number[] intensity = bda.get(1).getBinaryDataAsNumberArray();
-
                        float[] mz_values = new float[mz.length];
                        float[] intensity_values = new float[intensity.length];
 

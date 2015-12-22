@@ -28,8 +28,8 @@ public class MassSpectrum implements Serializable{
     public MassSpectrum(float[] x, float[] y ) {
         if (x.length != y.length) throw new IndexOutOfBoundsException();
         msValues = new float [2][x.length];
-        System.arraycopy(x, 0, msValues[0], 0, x.length);
-        System.arraycopy(y, 0, msValues[1], 0, y.length);
+        msValues[0] = x;
+        msValues[1] = y;
     }
     
     public MassSpectrum(float[] x, float[] y, String run_title, String ms_title ) {
@@ -146,19 +146,12 @@ public class MassSpectrum implements Serializable{
     // Convert spectrum to non-uniform if it's not already
     // this means copying over the m/z values from the MSChrom parent object
     // to the child MassSpectrum object
-    public MassSpectrum convertToNonUniform ( MSChrom c ) {
-        MassSpectrum returner;
-        if ( c.SPECTRA_UNIFORM ) {
-            returner = new MassSpectrum( c.mz_values, this.yvals );
-            returner.setRunTitle( this.getRunTitle() );
-            returner.setSpectrumTitle( this.getSpectrumTitle() );
-            return returner;
-        } else {
-            returner = new MassSpectrum( this.msValues, this.getSpectrumTitle() );
-            returner.setRunTitle( this.getRunTitle() );
-            return returner;
+    public void convertToNonUniform ( MSChrom chrom ) {
+        if ( chrom.SPECTRA_UNIFORM ) {
+            msValues = new float[2][];
+            msValues[0] = chrom.mz_values;
+            msValues[1] = yvals;
         }
-        
     }
     
     public static void main (String[] args) {

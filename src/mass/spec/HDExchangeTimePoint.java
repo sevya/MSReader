@@ -126,7 +126,7 @@ public class HDExchangeTimePoint {
     private int[] peakDetector () throws NoPeakDetectedException {
          // TODO figure out how this is detecting peaks and document it a little
         double[][] tope = parent.getPeptide()
-                .getThreadedDistribution( (int)Math.pow(10, 5) );
+                .getDistribution((int)Math.pow(10, 5), true, true);
         Utils.sort2DArray (tope, 0);
         int endindex = tope[0].length-1;
         for (int i = 0; i < tope[0].length; i++) {

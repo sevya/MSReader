@@ -84,7 +84,7 @@ public class Peak_Zoom extends javax.swing.JFrame {
         cpn.setLocationRelativeTo(this);
         cpn.setVisible(true);
         final Peptide peptide = cpn.getPeptides()[0];
-        double[][] tope = peptide.getNonThreadedDistribution((int)Math.pow(10, 5));
+        double[][] tope = peptide.getDistribution((int)Math.pow(10, 5), true, true);
         int endindex = tope[0].length-1;
         for (int i = 0; i < tope[0].length; i++) {
             if (tope[1][i] > .005) endindex = i;

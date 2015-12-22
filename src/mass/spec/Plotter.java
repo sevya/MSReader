@@ -4,6 +4,7 @@ package mass.spec;
 import java.awt.Color;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.util.List;
 import javax.swing.JFrame;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -179,6 +180,54 @@ public class Plotter extends JFrame {
         XYSeries series = new XYSeries("XY Graph");
         for (int i= 0; i < x.length; i++) {
             series.add(x[i], y[i]);
+        }
+        
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        dataset.addSeries(series);
+        
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                "Chart 1",
+                "x-axis",
+                "y-axis",
+                dataset,
+                PlotOrientation.VERTICAL,
+                true,
+                true,
+                false
+                );
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setPreferredSize(new java.awt.Dimension(500, 270));
+        setContentPane(chartPanel); 
+    }
+    
+    public Plotter(float[] x, float[] y) {
+        XYSeries series = new XYSeries("XY Graph");
+        for (int i= 0; i < x.length; i++) {
+            series.add(x[i], y[i]);
+        }
+        
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        dataset.addSeries(series);
+        
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                "Chart 1",
+                "x-axis",
+                "y-axis",
+                dataset,
+                PlotOrientation.VERTICAL,
+                true,
+                true,
+                false
+                );
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setPreferredSize(new java.awt.Dimension(500, 270));
+        setContentPane(chartPanel); 
+    }
+    
+    public Plotter(List<Float> x, List<Float> y) {
+        XYSeries series = new XYSeries("XY Graph");
+        for (int i= 0; i < x.size(); ++i) {
+            series.add(x.get(i), y.get(i));
         }
         
         XYSeriesCollection dataset = new XYSeriesCollection();

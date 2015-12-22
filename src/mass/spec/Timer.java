@@ -10,8 +10,8 @@ public class Timer {
         start = System.nanoTime();
     }
     
-    public long getTime() {
-        return (System.nanoTime() - start)/(long)Math.pow(10, 6);
+    public float getTime() {
+        return (System.nanoTime() - start)/(float)Math.pow(10, 9);
     }
     
     public void reset() {
@@ -19,6 +19,6 @@ public class Timer {
     }
     
     public void printTime() {
-        System.out.println(getTime());
+        System.out.println(getTime()+" seconds elapsed");
     }
 }

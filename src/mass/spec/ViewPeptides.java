@@ -518,47 +518,7 @@ public class ViewPeptides extends javax.swing.JDialog {
         int index = jTable1.getSelectedRow();
         msr.chromatogramType = MSReader.chromType.CHROM_TYPE_EIC;
         Peptide pept = msr.getPeptides().elementAt(index);
-        MSChrom currentMSC = MSReader.getInstance().currentMSC;
-        float[][] eic = currentMSC.getEIC(pept.mz - 2, pept.mz + 2);
-        // TODO - peptide RT should be in float but this messes up my serialized objects
-        int elutionindex = currentMSC.getElutionIndexFromEIC(eic, (float)pept.retentionTime);
-        MassSpectrum currentMS = currentMSC.spectra[elutionindex];
-
-        currentMS.convertToNonUniform( currentMSC );
-        int windowSize = MSReader.getInstance().getIntProperty("windowSize");
-        
-        float[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
-            
-        double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 5));
-        
-        // Normalize the isotopic distribution percentages
-        double max = MSMath.getMax ( dataRange[ 1 ] ); 
-        max /= MSMath.getMax( isotope[1] );
-        for (int i = 0; i < isotope[1].length; i++) isotope[1][i] *= max;
-        
-        XYSeries dataSeries = FormatChange.ArrayToXYSeries( dataRange ); 
-        
-        XYSeries isotopeSeries = FormatChange.ArrayToXYSeries(isotope, "tope");
-        
-        // Hack to force lines to go back to zero on either side of isotopic peak
-        for (int i = 0; i < isotope[0].length; i++) {
-            isotopeSeries.add( isotope[0][i], 0.0 );
-            isotopeSeries.add( isotope[0][i], Double.NaN );
-        }
-        
-        XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries( dataSeries );
-        dataset.addSeries( isotopeSeries );
-        JFreeChart chart = Utils.drawChart( dataset, pept.displaySequence +
-                " ("+String.format("%.2f",currentMS.getRetentionTime())+" RT)",
-                "m/z","intensity" );
-        
-        Peak_Zoom pz = new Peak_Zoom();
-        pz.setChart(chart);
-        pz.expandGraph();
-        pz.setTitle( MSMath.getScore( dataRange, isotope ) + "" );
-        pz.setVisible(true);
-        dispose();
+        MSReader.getInstance().checkPeptideAccuracy( pept );
     }//GEN-LAST:event_jButton1ActionPerformed
     
     private void refresh() {

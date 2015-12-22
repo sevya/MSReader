@@ -17,7 +17,7 @@ public class Peptide implements Serializable {
     int charge;
     double MW;
     double mz;
-    double retentionTime;
+    double elutiontime;
     int[] element_composition = new int[5];
     Random rand;
     static final long serialVersionUID = 35364321;
@@ -32,7 +32,7 @@ public class Peptide implements Serializable {
         displaySequence = str;
         sequence = Utils.trimPeptide(str);
         charge = z;
-        retentionTime = retention;
+        elutiontime = retention;
         getElementComposition();
         MW = getMolecularWeight();
         mz = (MW+z)/z;
@@ -131,13 +131,22 @@ public class Peptide implements Serializable {
         one[3] -= 1;
     }
     
-    public double[][] getNonThreadedDistribution (int reps) {
-        Thread thread = new Thread (new DistributionCalc(this, reps, 1, mass_vector, prob_vector, new Object(), false));
-        thread.start();
-        try {
-            thread.join();
-        } catch (InterruptedException ex) {
-            //do nothing
+    public double[][] getDistribution (int reps, 
+            boolean threaded, boolean discrete) {
+        int threadCount = threaded ? OPTIMUM_THREAD_NO : 1;
+        Thread[] threads = new Thread[threadCount];
+        DistributionCalc calculator = new DistributionCalc(
+                this, reps, threadCount, 
+                mass_vector, prob_vector, new Object(), discrete );
+        for (int i = 0; i < threads.length; i++) {
+            threads[i] = new Thread(calculator);
+            threads[i].start();
+        } for ( Thread thread : threads ) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                //do nothing
+            }
         }
         double[][] data = new double[2][];
         data[0] = FormatChange.ArraylistToArray(mass_vector);
@@ -145,80 +154,8 @@ public class Peptide implements Serializable {
         return data;
     }
     
-    public double[][] getThreadedDistribution (int reps) {
-        int num_threads = OPTIMUM_THREAD_NO;
-        Thread[] threads = new Thread[num_threads];
-        final Object o = new Object();
-        DistributionCalc calc = new DistributionCalc(this, reps, num_threads, mass_vector, prob_vector, o, false);
-        for (int i = 0; i < threads.length; i++) {
-//            threads[i] = new Thread(new DistributionCalc(this, reps, num_threads, mass_vector, prob_vector, o));
-            threads[i] = new Thread(calc);
-            threads[i].start();
-        } for (int i = 0; i < threads.length; i++) {
-            try {
-                threads[i].join();
-            } catch (InterruptedException e) {
-                //do nothing
-            }
-        }
-       double[][] data = new double[2][];
-       data[0] = FormatChange.ArraylistToArray(mass_vector);
-       data[1] = FormatChange.ArraylistToArray(prob_vector);
-       return data;
-    }
-    
-    public double[][] getDiscreteDistribution (int reps) {
-        int num_threads = OPTIMUM_THREAD_NO;
-        Thread[] threads = new Thread[num_threads];
-        final Object o = new Object();
-        DistributionCalc calc = new DistributionCalc(this, reps, num_threads, mass_vector, prob_vector, o, true);
-        for (int i = 0; i < threads.length; i++) {
-//            threads[i] = new Thread(new DistributionCalc(this, reps, num_threads, mass_vector, prob_vector, o));
-            threads[i] = new Thread(calc);
-            threads[i].start();
-        } for (int i = 0; i < threads.length; i++) {
-            try {
-                threads[i].join();
-            } catch (InterruptedException e) {
-                //do nothing
-            }
-        }
-       double[][] data = new double[2][];
-       data[0] = FormatChange.ArraylistToArray(mass_vector);
-       data[1] = FormatChange.ArraylistToArray(prob_vector);
-       return data;
-    }
-    
-    public double[][] getNewDistribution (int reps) {
-        CarbonGenerator c = new CarbonGenerator( MSReader.getRNG(), element_composition[0]);
-        HydrogenGenerator h = new HydrogenGenerator( MSReader.getRNG(), element_composition[1]);
-        NitrogenGenerator n = new NitrogenGenerator( MSReader.getRNG(), element_composition[2]);
-        OxygenGenerator o = new OxygenGenerator( MSReader.getRNG(), element_composition[3]);
-        SulfurGenerator s = new SulfurGenerator( MSReader.getRNG(), element_composition[4]);
-        mass_vector = new ArrayList();
-        prob_vector = new ArrayList();
-        double sum;
-        double frequency = 1/(double)reps;
-        for (int j = 0; j < reps; j++) {
-            sum = (c.getSum()+h.getSum()+n.getSum()+o.getSum()+s.getSum()+(Isotope.H1.mass()*charge))/charge;
-            int index = mass_vector.indexOf(sum);
-            if (index != -1) {
-                prob_vector.set(index, prob_vector.get(index)+frequency);
-            } else {
-                mass_vector.add(sum);
-                prob_vector.add(frequency);
-            }
-        }
-        return new double[][] {FormatChange.ArraylistToArray(mass_vector), 
-            FormatChange.ArraylistToArray(prob_vector)};
-    }
-    
-    
     public static void main (String[] args) {
        Peptide pept = new Peptide("GVSSACPYQGKSSF", 1, 8.32);
-       System.out.println(pept.mz);
-       pept = new Peptide("GVSSACP(+0.997)YQGKSSF", 1, 8.32);
-       System.out.println(pept.mz);
     }
 }
 
@@ -229,16 +166,14 @@ class DistributionCalc implements Runnable {
     int num_threads;
     List<Double> mass_vector;
     List<Double> prob_vector;
-    Random rand;
     final Object lockObject;
-    boolean discrete = false;
+    boolean discrete;
     
     public DistributionCalc (Peptide p, int r, int threadno, List<Double> mv, 
             List<Double> pv, Object o, 
             boolean disc ) {
         peptide = p;
         reps = r;
-        rand = new Random();
         mass_vector = mv;
         prob_vector = pv;
         num_threads = threadno;
@@ -248,11 +183,10 @@ class DistributionCalc implements Runnable {
     
     @Override
     public void run() {
-        if ( discrete ) calculateDiscreteDistribution( reps/num_threads );
-        else calculateDistribution( reps/num_threads );
+        calculateDistribution( reps/num_threads, discrete );
     }
     
-    private void calculateDistribution (int r) {
+    private void calculateDistribution (int r, boolean discrete) {
         CarbonGenerator c = new CarbonGenerator(MSReader.getRNG(), peptide.element_composition[0]);
         HydrogenGenerator h = new HydrogenGenerator(MSReader.getRNG(), peptide.element_composition[1]);
         NitrogenGenerator n = new NitrogenGenerator(MSReader.getRNG(), peptide.element_composition[2]);
@@ -261,7 +195,15 @@ class DistributionCalc implements Runnable {
         double sum;
         double frequency = 1/(double)reps;
         for (int j = 0; j < r; j++) {
-            sum = (c.getSum()+h.getSum()+n.getSum()+o.getSum()+s.getSum()+(peptide.charge*Isotope.H1.mass()))/(double)peptide.charge;
+            if ( discrete ) {
+                sum = (c.getDiscreteSum()+h.getDiscreteSum()+n.getDiscreteSum()+
+                    o.getDiscreteSum()+s.getDiscreteSum()+
+                    (peptide.charge*Isotope.H1.mass()))/(double)peptide.charge;
+            } else {
+                sum = (c.getSum()+h.getSum()+n.getSum()+
+                    o.getSum()+s.getSum()+
+                    (peptide.charge*Isotope.H1.mass()))/(double)peptide.charge;
+            }
             synchronized (lockObject) {
                 int index = mass_vector.indexOf(sum);
                 if (index != -1) {
@@ -270,30 +212,6 @@ class DistributionCalc implements Runnable {
                     mass_vector.add(sum);
                     prob_vector.add(frequency);
                 }
-            }
-        }
-    }
-    
-    private void calculateDiscreteDistribution ( int r ) {
-        CarbonGenerator c = new CarbonGenerator(MSReader.getRNG(), peptide.element_composition[0]);
-        HydrogenGenerator h = new HydrogenGenerator(MSReader.getRNG(), peptide.element_composition[1]);
-        NitrogenGenerator n = new NitrogenGenerator(MSReader.getRNG(), peptide.element_composition[2]);
-        OxygenGenerator o = new OxygenGenerator(MSReader.getRNG(), peptide.element_composition[3]);
-        SulfurGenerator s = new SulfurGenerator(MSReader.getRNG(), peptide.element_composition[4]);
-        double sum;
-        double frequency = 1/(double)reps;
-        double step = 1/(double)peptide.charge;
-        
-        // Calculate for the first six and return the first five
-        for ( int ii = 0; ii <= 5; ++ii ) {
-            mass_vector.add( peptide.mz + ( step*ii ) );
-            prob_vector.add( 0.0 );
-        }
-        for (int j = 0; j < r; j++) {
-            sum = (c.getSum()+h.getSum()+n.getSum()+o.getSum()+s.getSum()+(peptide.charge*Isotope.H1.mass()))/(double)peptide.charge;
-            synchronized (lockObject) {
-                int index = Utils.closestTo( mass_vector, sum );
-                prob_vector.set( index, prob_vector.get( index ) + frequency );
             }
         }
     }
@@ -317,6 +235,14 @@ class CarbonGenerator {
         no12 = reps - no13;
         return Isotope.C12.mass()*no12 + Isotope.C13.mass()*no13;
     }
+    
+    public double getDiscreteSum() {
+        if (eng == null) return 0;
+        double no12, no13;
+        no13 = eng.nextValue();
+        no12 = reps - no13;
+        return Isotope.C12.mass()*no12 + (Isotope.C12.mass()+1)*no13;
+    }
 }
 
 class HydrogenGenerator {
@@ -335,6 +261,14 @@ class HydrogenGenerator {
         no2 = eng.nextValue();
         no1 = reps - no2;
         return Isotope.H1.mass()*no1 + Isotope.H2.mass()*no2;
+    }
+    
+    public double getDiscreteSum() {
+        if (eng == null) return 0;
+        double no1, no2;
+        no2 = eng.nextValue();
+        no1 = reps - no2;
+        return Isotope.H1.mass()*no1 + (Isotope.H1.mass()+1)*no2;
     }
 }
 
@@ -356,38 +290,15 @@ class NitrogenGenerator {
         no14 = reps - no15;
         return Isotope.N14.mass()*no14 + Isotope.N15.mass()*no15;
     }
-}
-class AltOxygenGenerator {
-    BinomialGenerator eng;
-    BinomialGenerator eng2;
-    int reps;
-    MersenneTwisterRNG mersenne;
     
-    public AltOxygenGenerator (MersenneTwisterRNG rng, int r) {
-        reps = r;
-        if (reps == 0) eng = null;
-        else eng = new BinomialGenerator(reps, (Isotope.O17.prob()+Isotope.O18.prob()), rng);
-        mersenne = rng;
-    }
-    
-    public double getSum() {
+    public double getDiscreteSum() {
         if (eng == null) return 0;
-        int noIsotopes = eng.nextValue();
-        if (noIsotopes == 0) return reps*Isotope.O16.mass();
-        int no16, no17=0, no18=0;
-        no16 = reps - noIsotopes;
-        eng2 = new BinomialGenerator(noIsotopes, Isotope.O17.prob()/(Isotope.O17.prob()+Isotope.O18.prob()), mersenne);
-        no17 = eng2.nextValue();
-        no18 = reps - (no16+no17);
-//        for (int i = 0; i < noIsotopes; i++) {
-//            double outcome = mersenne.nextDouble();
-//            if (outcome < (Isotope.O17.prob()/(Isotope.O17.prob()+Isotope.O18.prob()))) no17++;
-//            else no18++;
-//        }
-        return no16*Isotope.O16.mass() + no17*Isotope.O17.mass() + no18*Isotope.O18.mass();
+        double no14, no15;
+        no15 = eng.nextValue();
+        no14 = reps - no15;
+        return Isotope.N14.mass()*no14 + (Isotope.N14.mass()+1)*no15;
     }
 }
-
 
 class OxygenGenerator {
     
@@ -413,6 +324,20 @@ class OxygenGenerator {
             else no18++;
         }
         return no16*Isotope.O16.mass() + no17*Isotope.O17.mass() + no18*Isotope.O18.mass();
+    }
+    
+    public double getDiscreteSum() {
+        if (eng == null) return 0;
+        int noIsotopes = eng.nextValue();
+        int no16, no17=0, no18=0;
+        no16 = reps - noIsotopes;
+        for (int i = 0; i < noIsotopes; i++) {
+            double outcome = mersenne.nextDouble();
+            if (outcome < (Isotope.O17.prob()/(Isotope.O17.prob()+Isotope.O18.prob()))) no17++;
+            else no18++;
+        }
+        return no16*Isotope.O16.mass() + no17*(Isotope.O16.mass()+1) 
+                + no18*(Isotope.O16.mass()+2);
     }
 }
 
@@ -445,6 +370,24 @@ class SulfurGenerator {
                 no33*Isotope.S33.mass() + 
                 no34*Isotope.S34.mass() + 
                 no36*Isotope.S36.mass();
+    }
+    
+    public double getDiscreteSum() {
+        if (eng == null) return 0;
+        int noIsotopes = eng.nextValue();
+        int no32, no33=0, no34=0, no36=0;
+        no32 = reps - noIsotopes;
+        for (int i = 0; i < noIsotopes; i++) {
+            double outcome = mersenne.nextDouble();
+            if (outcome < (Isotope.S33.prob()/(Isotope.S33.prob()+Isotope.S34.prob()+Isotope.S36.prob()))) no33++;
+            else if (outcome < (Isotope.S33.prob()/(Isotope.S33.prob()+Isotope.S34.prob()+Isotope.S36.prob())
+                    + Isotope.S34.prob()/(Isotope.S33.prob()+Isotope.S34.prob()+Isotope.S36.prob()))) no34++;
+            else no36++;
+        }
+        return no32*Isotope.S32.mass() + 
+                no33*(Isotope.S32.mass()+1) + 
+                no34*(Isotope.S32.mass()+2) + 
+                no36*(Isotope.S32.mass()+4);
     }
 }
 

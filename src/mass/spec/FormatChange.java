@@ -260,7 +260,7 @@ public class FormatChange {
             ex[i][0] = pept.displaySequence;
             ex[i][1] = form.format(pept.mz);
             ex[i][2] = pept.charge;
-            ex[i][3] = pept.retentionTime;
+            ex[i][3] = pept.elutiontime;
         }
         return new DefaultTableModel(ex, t.labels);
     }

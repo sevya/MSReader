@@ -601,7 +601,7 @@ public class MSReader extends javax.swing.JFrame {
     ///@brief Create generic charts for start-up
     private void startUpCharts() {
         XYSeriesCollection dataset = new XYSeriesCollection();
-        JFreeChart chart = Utils.drawChart( dataset, "Load a CDF file to begin...","time","" );
+        JFreeChart chart = Utils.drawChart( dataset, "Load a CDF or MZML file to begin...","time","" );
         ChartPanel chartPanel = new ChartPanel (chart);
         chartPanel.setPreferredSize(new java.awt.Dimension(785, 440));
         jPanel1.removeAll();
@@ -701,7 +701,7 @@ public class MSReader extends javax.swing.JFrame {
             return;
         }
         final String file_type = extension;
-        final LoadingDialog ld = new LoadingDialog(this, false);
+        final LoadingDialog ld = new LoadingDialog(this, true);
         ld.setLocationRelativeTo(this);
         ld.setVisible(true);
         worker = new SwingWorker<Void, Void>() {
@@ -772,7 +772,7 @@ public class MSReader extends javax.swing.JFrame {
            int choice = JOptionPane.showConfirmDialog(this, "Spectrum has already been smoothed. Do you wish to smooth again?");
            if (choice > 0) return; 
         }
-        final LoadingDialog ld = new LoadingDialog(this, false);
+        final LoadingDialog ld = new LoadingDialog(this, true);
          worker = new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() {
@@ -1099,7 +1099,7 @@ public class MSReader extends javax.swing.JFrame {
             Utils.showErrorMessage("Could not create file"); 
             return; 
         }
-        final LoadingDialog ld = new LoadingDialog(this, false);
+        final LoadingDialog ld = new LoadingDialog(this, true);
         ld.setLocationRelativeTo(this);
         ld.setText("Converting...");
         ld.setVisible(true);
@@ -1190,7 +1190,7 @@ public class MSReader extends javax.swing.JFrame {
         cpn.setVisible(true);
         final Peptide[] pept = cpn.getPeptides();
         if (pept == null) return;
-        final LoadingDialog ld = new LoadingDialog(null, false);
+        final LoadingDialog ld = new LoadingDialog(null, true);
         
         // edited to allow for multiple HDExchangeInstances with multiple peptides
         final HDExchange[] hdExchangeInstances = new HDExchange[pept.length];
@@ -1235,7 +1235,7 @@ public class MSReader extends javax.swing.JFrame {
                         }
 
                         // TODO - peptide RT should be a float but this messes up my serialized objects
-                        elutionIndex = currentMSC.getElutionIndexFromEIC(eic, (float)pept[ii].retentionTime);
+                        elutionIndex = currentMSC.getElutionIndexFromEIC(eic, (float)pept[ii].elutiontime);
                         
                         currentMS = currentMSC.spectra[ elutionIndex ];
                         
@@ -1302,16 +1302,20 @@ public class MSReader extends javax.swing.JFrame {
         cpn.setVisible(true);
         final Peptide pept = cpn.getPeptides()[0];
         if ( pept == null ) return;
+        checkPeptideAccuracy( pept );
+    }//GEN-LAST:event_checkPeptideAccuracyActionPerformed
+
+    public void checkPeptideAccuracy ( Peptide pept ) {
         float[][] eic = currentMSC.getEIC(pept.mz - 1, pept.mz + 1);
         // TODO - peptide RT should be in float but this messes up my serialized objects
-        int elutionindex = currentMSC.getElutionIndexFromEIC(eic, (float)pept.retentionTime);
+        int elutionindex = currentMSC.getElutionIndexFromEIC(eic, (float)pept.elutiontime);
         currentMS = currentMSC.spectra[elutionindex];
         currentMS.convertToNonUniform( currentMSC );
         int windowSize = MSReader.getInstance().getIntProperty("windowSize");
         
         float[][] dataRange = currentMS.getWindow( pept.mz, windowSize );
             
-        double[][] isotope = pept.getThreadedDistribution((int)Math.pow(10, 4));
+        double[][] isotope = pept.getDistribution((int)Math.pow(10, 5), true, true);
         
         // Normalize the isotopic distribution percentages
         double max = MSMath.getMax ( dataRange[ 1 ] ); 
@@ -1340,8 +1344,8 @@ public class MSReader extends javax.swing.JFrame {
         pz.expandGraph();
         pz.setTitle( MSMath.getScore( dataRange, isotope ) + "" );
         pz.setVisible(true);
-    }//GEN-LAST:event_checkPeptideAccuracyActionPerformed
-
+    }
+    
     private void sequenceEngineActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_sequenceEngineActionPerformed
         SequenceEngine eng = new SequenceEngine(this);
         eng.setLocationRelativeTo(this);

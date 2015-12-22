@@ -167,9 +167,9 @@ public class HDExchangeSetup extends javax.swing.JDialog {
     private void addFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addFileActionPerformed
         if ( jTextField1.getText().equals("") ) { return; }
         
-        MassSpectrum ms = MSReader.getInstance().currentMS.convertToNonUniform( MSReader.getInstance().currentMSC );
+        MSReader.getInstance().currentMS.convertToNonUniform( MSReader.getInstance().currentMSC );
         
-        MSReader.getHDExchangeInstance().addSpectrum( ms );
+        MSReader.getHDExchangeInstance().addSpectrum( MSReader.getInstance().currentMS );
         
         listModel.addElement(jTextField1.getText());
         spectraList.setModel(listModel);
